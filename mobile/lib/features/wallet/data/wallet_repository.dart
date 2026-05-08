@@ -24,13 +24,14 @@ class WalletRepository {
 
   Future<WalletSummary> summary() async {
     final res = await _client.raw.get('/wallet');
-    final data = (res.data['data']['wallet']) as Map<String, dynamic>;
+    final data = unwrapApiData(res.data)['wallet'] as Map<String, dynamic>;
     return WalletSummary.fromJson(data);
   }
 
   Future<List<WalletLedgerItem>> ledger() async {
     final res = await _client.raw.get('/wallet/ledger');
-    final rows = (res.data['data']['ledger'] as List<dynamic>? ?? const []);
+    final rows =
+        (unwrapApiData(res.data)['ledger'] as List<dynamic>? ?? const []);
     return rows
         .cast<Map<String, dynamic>>()
         .map(WalletLedgerItem.fromJson)
@@ -43,7 +44,7 @@ class WalletRepository {
       data: {'amount': amount},
     );
     return AddMoneyOrder.fromJson(
-      res.data['data']['order'] as Map<String, dynamic>,
+      unwrapApiData(res.data)['order'] as Map<String, dynamic>,
     );
   }
 }

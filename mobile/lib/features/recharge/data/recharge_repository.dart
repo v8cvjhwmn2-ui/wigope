@@ -17,9 +17,7 @@ class RechargeRepository {
       '/recharge/detect-operator',
       queryParameters: {'number': number},
     );
-    return OperatorDetection.fromJson(
-      (res.data['data'] as Map).cast<String, dynamic>(),
-    );
+    return OperatorDetection.fromJson(unwrapApiData(res.data));
   }
 
   Future<List<MobilePlan>> mobilePlans({
@@ -30,7 +28,8 @@ class RechargeRepository {
       '/recharge/mobile-plans',
       queryParameters: {'opid': opid, 'circle': circleCode},
     );
-    final rows = (res.data['data']['plans'] as List<dynamic>? ?? const []);
+    final rows =
+        (unwrapApiData(res.data)['plans'] as List<dynamic>? ?? const []);
     return rows
         .cast<Map<String, dynamic>>()
         .map(MobilePlan.fromJson)
@@ -51,7 +50,7 @@ class RechargeRepository {
       },
     );
     return RechargeTransaction.fromJson(
-      (res.data['data']['transaction'] as Map).cast<String, dynamic>(),
+      (unwrapApiData(res.data)['transaction'] as Map).cast<String, dynamic>(),
     );
   }
 
@@ -73,7 +72,7 @@ class RechargeRepository {
       },
     );
     return RechargeTransaction.fromJson(
-      (res.data['data']['transaction'] as Map).cast<String, dynamic>(),
+      (unwrapApiData(res.data)['transaction'] as Map).cast<String, dynamic>(),
     );
   }
 }

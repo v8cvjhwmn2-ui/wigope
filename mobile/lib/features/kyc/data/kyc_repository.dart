@@ -20,8 +20,7 @@ class KycRepository {
   Future<KycStatus> status() async {
     try {
       final res = await _client.raw.get('/kyc/status');
-      return KycStatus.fromJson(
-          (res.data['data'] as Map).cast<String, dynamic>());
+      return KycStatus.fromJson(unwrapApiData(res.data));
     } on DioException {
       return const KycStatus(status: 'none');
     }
@@ -46,8 +45,7 @@ class KycRepository {
         if (ocrConfidence != null) 'ocrConfidence': ocrConfidence,
       },
     );
-    return KycStatus.fromJson(
-        (res.data['data'] as Map).cast<String, dynamic>());
+    return KycStatus.fromJson(unwrapApiData(res.data));
   }
 }
 

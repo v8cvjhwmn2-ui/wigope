@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../app/theme/colors.dart';
@@ -43,13 +44,14 @@ class _HubbleWebViewScreenState extends State<HubbleWebViewScreen> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(WigopeColors.surfaceBase)
       ..addJavaScriptChannel('HubbleBridge', onMessageReceived: _onSdkMessage)
-      ..setNavigationDelegate(NavigationDelegate(
-        onProgress: (p) {
-          if (mounted) setState(() => _progress = p);
-        },
-        onPageFinished: (_) async {
-          // Forward every postMessage from the SDK into our JS channel.
-          await _controller.runJavaScript('''
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (p) {
+            if (mounted) setState(() => _progress = p);
+          },
+          onPageFinished: (_) async {
+            // Forward every postMessage from the SDK into our JS channel.
+            await _controller.runJavaScript('''
             (function() {
               if (window.__wigopeBridgeInstalled) return;
               window.__wigopeBridgeInstalled = true;
@@ -60,21 +62,32 @@ class _HubbleWebViewScreenState extends State<HubbleWebViewScreen> {
               });
             })();
           ''');
-        },
-        onWebResourceError: (err) {
-          if (!mounted) return;
-          setState(() {
-            _hardError = true;
-            _errorMessage = err.description;
-          });
-        },
-        onNavigationRequest: (req) {
-          // Let `intent://` and `upi://` and `tel:` etc. fall through to the OS.
-          // Hubble triggers UPI app launches via these custom schemes.
-          if (req.url.startsWith('http')) return NavigationDecision.navigate;
-          return NavigationDecision.prevent;
-        },
-      ));
+            Future<void>.delayed(const Duration(seconds: 2), () {
+              if (mounted && !_hardError && !_appReady) {
+                setState(() => _appReady = true);
+              }
+            });
+          },
+          onWebResourceError: (err) {
+            if (err.isForMainFrame != true) return;
+            if (!mounted) return;
+            setState(() {
+              _hardError = true;
+              _errorMessage = err.description;
+            });
+          },
+          onNavigationRequest: (req) {
+            // Let `intent://` and `upi://` and `tel:` etc. fall through to the OS.
+            // Hubble triggers UPI app launches via these custom schemes.
+            if (req.url.startsWith('http')) return NavigationDecision.navigate;
+            launchUrl(
+              Uri.parse(req.url),
+              mode: LaunchMode.externalApplication,
+            );
+            return NavigationDecision.prevent;
+          },
+        ),
+      );
   }
 
   @override
@@ -149,7 +162,8 @@ class _HubbleWebViewScreenState extends State<HubbleWebViewScreen> {
       // ignore: avoid_print
       assert(() {
         debugPrint(
-            '[Hubble analytics] $event ${payload?['properties'] ?? const {}}');
+          '[Hubble analytics] $event ${payload?['properties'] ?? const {}}',
+        );
         return true;
       }());
     }
@@ -217,8 +231,11 @@ class _Header extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(PhosphorIconsBold.lightning,
-                    size: 12, color: WigopeColors.orange600),
+                const Icon(
+                  PhosphorIconsBold.lightning,
+                  size: 12,
+                  color: WigopeColors.orange600,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Powered by Hubble',
@@ -272,20 +289,28 @@ class _LoadingVeil extends StatelessWidget {
               color: WigopeColors.orange50,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const Icon(PhosphorIconsBold.gift,
-                color: WigopeColors.orange600, size: 26),
+            child: const Icon(
+              PhosphorIconsBold.gift,
+              color: WigopeColors.orange600,
+              size: 26,
+            ),
           ),
           const SizedBox(height: 16),
           const SizedBox(
             width: 22,
             height: 22,
             child: CircularProgressIndicator(
-                strokeWidth: 2.4, color: WigopeColors.orange600),
+              strokeWidth: 2.4,
+              color: WigopeColors.orange600,
+            ),
           ),
           const SizedBox(height: 12),
-          Text('Loading Hubble Rewards…',
-              style:
-                  WigopeText.bodyS.copyWith(color: WigopeColors.textSecondary)),
+          Text(
+            'Loading Hubble Rewards…',
+            style: WigopeText.bodyS.copyWith(
+              color: WigopeColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -308,12 +333,15 @@ class _ErrorOverlay extends StatelessWidget {
           Container(
             width: 88,
             height: 88,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: WigopeColors.errorBg,
               shape: BoxShape.circle,
             ),
-            child: const Icon(PhosphorIconsBold.warningCircle,
-                size: 44, color: WigopeColors.error),
+            child: const Icon(
+              PhosphorIconsBold.warningCircle,
+              size: 44,
+              color: WigopeColors.error,
+            ),
           ),
           const SizedBox(height: 18),
           Text("Hubble couldn't load", style: WigopeText.h2),
@@ -335,7 +363,8 @@ class _ErrorOverlay extends StatelessWidget {
               side: const BorderSide(color: WigopeColors.orange600),
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],

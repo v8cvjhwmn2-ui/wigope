@@ -34,7 +34,7 @@ class TransactionRepository {
       queryParameters: {if (status != null) 'status': status},
     );
     final rows =
-        (res.data['data']['transactions'] as List<dynamic>? ?? const []);
+        (unwrapApiData(res.data)['transactions'] as List<dynamic>? ?? const []);
     return rows
         .cast<Map<String, dynamic>>()
         .map(WigopeTransaction.fromJson)
@@ -44,15 +44,17 @@ class TransactionRepository {
   Future<WigopeTransaction> detail(String id) async {
     final res = await _client.raw.get('/transactions/$id');
     return WigopeTransaction.fromJson(
-      res.data['data']['transaction'] as Map<String, dynamic>,
+      unwrapApiData(res.data)['transaction'] as Map<String, dynamic>,
     );
   }
 
   Uri receiptUri(String id) {
     return _client.raw.options.baseUrl.endsWith('/')
         ? Uri.parse(
-            '${_client.raw.options.baseUrl}transactions/$id/receipt.pdf')
+            '${_client.raw.options.baseUrl}transactions/$id/receipt.pdf',
+          )
         : Uri.parse(
-            '${_client.raw.options.baseUrl}/transactions/$id/receipt.pdf');
+            '${_client.raw.options.baseUrl}/transactions/$id/receipt.pdf',
+          );
   }
 }

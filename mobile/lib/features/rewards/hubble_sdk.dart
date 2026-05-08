@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme/colors.dart';
 import '../../app/theme/typography.dart';
+import '../../core/api/dio_client.dart';
+import '../../core/error/app_exception.dart';
 import '../auth/application/auth_controller.dart';
 
 class HubbleSdkConfig {
@@ -24,8 +26,7 @@ class HubbleSdkConfig {
   // Staging SDK secret only. Override with --dart-define for other environments.
   static const clientSecret = String.fromEnvironment(
     'HUBBLE_CLIENT_SECRET',
-    defaultValue:
-        'a0qmbxpCR9szzJstrtIugXk6BnQmVAIbBbdCV9Ttg9hyHoMNBEVjr3Z3v6sbTd28',
+    defaultValue: '',
   );
 
   static const theme = String.fromEnvironment(
@@ -39,6 +40,12 @@ class HubbleSdkConfig {
   );
 
   static Uri sdkUri({required String token, String? deepLinkPath}) {
+    if (clientSecret.isEmpty) {
+      throw AppException(
+        code: 'HUBBLE_CONFIG_MISSING',
+        message: 'Hubble Rewards is not configured for this build.',
+      );
+    }
     final base = Uri.parse(sdkBaseUrl);
     return base.replace(
       path: deepLinkPath ?? base.path,
@@ -57,8 +64,17 @@ class HubbleSdkConfig {
   static Future<String> issueSsoToken(BuildContext context) async {
     final container = ProviderScope.containerOf(context, listen: false);
     final dio = container.read(dioClientProvider).raw;
-    final res = await dio.post('/rewards/sso-token');
-    return '${res.data['data']['token']}';
+    final res = await dio
+        .post('/rewards/sso-token')
+        .timeout(const Duration(seconds: 15));
+    final token = unwrapApiData(res.data)['token']?.toString() ?? '';
+    if (token.isEmpty) {
+      throw AppException(
+        code: 'HUBBLE_TOKEN_MISSING',
+        message: 'Rewards session token was not returned.',
+      );
+    }
+    return token;
   }
 }
 
@@ -85,7 +101,8 @@ class HubbleSdkLauncher {
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               content: Text(
                 'Could not start your Hubble Rewards session.',
                 style: WigopeText.body.copyWith(color: Colors.white),

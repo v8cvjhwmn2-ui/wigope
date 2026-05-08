@@ -24,8 +24,8 @@ class NotificationRepository {
 
   Future<List<WigopeNotification>> list() async {
     final res = await _client.raw.get('/notifications');
-    final rows =
-        (res.data['data']['notifications'] as List<dynamic>? ?? const []);
+    final data = unwrapApiData(res.data);
+    final rows = (data['notifications'] as List<dynamic>? ?? const []);
     return rows
         .cast<Map<String, dynamic>>()
         .map(WigopeNotification.fromJson)
@@ -34,7 +34,7 @@ class NotificationRepository {
 
   Future<int> unreadCount() async {
     final res = await _client.raw.get('/notifications');
-    return (res.data['data']['unreadCount'] as num?)?.toInt() ?? 0;
+    return (unwrapApiData(res.data)['unreadCount'] as num?)?.toInt() ?? 0;
   }
 
   Future<void> markAllRead() async {

@@ -11,9 +11,10 @@ npm install
 npm run dev
 ```
 
-Health check: `curl http://localhost:4000/health`
+Production health check: `curl https://recharge-api.wigope.com/api/v1/health`
 
-In dev mode (`NODE_ENV=development`), `/auth/send-otp` returns the OTP in the response body and accepts `123456` as a fixed code — no SMS provider needed for the mobile flow.
+OTP always goes through the configured SMS provider. Do not enable fixed-code
+development OTP behavior in production builds.
 
 ## Layout
 

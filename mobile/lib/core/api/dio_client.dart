@@ -43,6 +43,7 @@ class DioClient {
         headers: {'Accept': 'application/json'},
       ),
     );
+    _log('baseUrl=$baseUrl');
     final client = DioClient._(dio, tokens);
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -158,7 +159,7 @@ class DioClient {
     if (headers.containsKey('Authorization')) {
       headers['Authorization'] = 'Bearer ***';
     }
-    debugPrint(
+    _log(
       '[API] --> ${options.method} ${options.baseUrl}${options.path} '
       'query=${options.queryParameters} headers=$headers body=${_safeBody(options.data)}',
     );
@@ -166,7 +167,7 @@ class DioClient {
 
   static void _logResponse(Response<dynamic> response) {
     if (!kDebugMode && !_apiDebugLogs) return;
-    debugPrint(
+    _log(
       '[API] <-- ${response.statusCode} ${response.requestOptions.method} '
       '${response.requestOptions.path} body=${_safeBody(response.data)}',
     );
@@ -174,7 +175,7 @@ class DioClient {
 
   static void _logDioError(DioException err) {
     if (!kDebugMode && !_apiDebugLogs) return;
-    debugPrint(
+    _log(
       '[API] !! ${err.type} ${err.response?.statusCode ?? '-'} '
       '${err.requestOptions.method} ${err.requestOptions.path} '
       'message=${err.message} body=${_safeBody(err.response?.data)} error=${err.error}',
@@ -182,7 +183,20 @@ class DioClient {
   }
 }
 
+void _log(String message) {
+  if (!kDebugMode && !_apiDebugLogs) return;
+  // ignore: avoid_print
+  print(message);
+}
+
 String? _extractCode(Object? body) {
+  if (body is String) {
+    try {
+      return _extractCode(jsonDecode(body));
+    } catch (_) {
+      return null;
+    }
+  }
   if (body is Map && body['error'] is Map) {
     return body['error']['code'] as String?;
   }
@@ -243,9 +257,10 @@ AppException _toAppException(DioException err) {
     );
   }
 
-  final body = err.response?.data;
-  if (body is Map && body['error'] is Map) {
-    final e = body['error'] as Map;
+  final body = _mapBody(err.response?.data);
+  final errorBody = body?['error'];
+  if (errorBody is Map) {
+    final e = errorBody;
     return AppException(
       code: (e['code'] as String?) ?? 'INTERNAL_ERROR',
       message: (e['message'] as String?) ?? 'Something went wrong',
@@ -258,6 +273,19 @@ AppException _toAppException(DioException err) {
     message: 'Something went wrong. Please try again.',
     statusCode: err.response?.statusCode,
   );
+}
+
+Map<String, dynamic>? _mapBody(Object? body) {
+  if (body is Map) return body.cast<String, dynamic>();
+  if (body is String && body.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) return decoded.cast<String, dynamic>();
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
 }
 
 String _safeBody(Object? body) {

@@ -15,7 +15,10 @@ final dmtSnapshotProvider =
   final beneficiaries = await repo.beneficiaries();
   final transfers = await repo.transfers();
   return DmtSnapshot(
-      sender: sender, beneficiaries: beneficiaries, transfers: transfers);
+    sender: sender,
+    beneficiaries: beneficiaries,
+    transfers: transfers,
+  );
 });
 
 class DmtRepository {
@@ -25,7 +28,7 @@ class DmtRepository {
   Future<DmtSender?> sender() async {
     try {
       final res = await _client.raw.get('/dmt/sender');
-      final raw = res.data['data']['sender'];
+      final raw = unwrapApiData(res.data)['sender'];
       if (raw == null) return null;
       return DmtSender.fromJson((raw as Map).cast<String, dynamic>());
     } on DioException {
@@ -33,21 +36,26 @@ class DmtRepository {
     }
   }
 
-  Future<DmtSender> registerSender(
-      {required String mobile, required String name}) async {
-    final res = await _client.raw
-        .post('/dmt/sender', data: {'mobile': mobile, 'name': name});
+  Future<DmtSender> registerSender({
+    required String mobile,
+    required String name,
+  }) async {
+    final res = await _client.raw.post(
+      '/dmt/sender',
+      data: {'mobile': mobile, 'name': name},
+    );
     return DmtSender.fromJson(
-        (res.data['data']['sender'] as Map).cast<String, dynamic>());
+      (unwrapApiData(res.data)['sender'] as Map<String, dynamic>),
+    );
   }
 
   Future<List<DmtBeneficiary>> beneficiaries() async {
     final res = await _client.raw.get('/dmt/beneficiaries');
     final rows =
-        res.data['data']['beneficiaries'] as List<dynamic>? ?? const [];
+        unwrapApiData(res.data)['beneficiaries'] as List<dynamic>? ?? const [];
     return rows
-        .cast<Map>()
-        .map((e) => DmtBeneficiary.fromJson(e.cast<String, dynamic>()))
+        .cast<Map<String, dynamic>>()
+        .map(DmtBeneficiary.fromJson)
         .toList();
   }
 
@@ -57,14 +65,18 @@ class DmtRepository {
     required String ifsc,
     String? bankName,
   }) async {
-    final res = await _client.raw.post('/dmt/beneficiaries', data: {
-      'name': name,
-      'accountNumber': accountNumber,
-      'ifsc': ifsc,
-      if (bankName != null && bankName.isNotEmpty) 'bankName': bankName,
-    });
+    final res = await _client.raw.post(
+      '/dmt/beneficiaries',
+      data: {
+        'name': name,
+        'accountNumber': accountNumber,
+        'ifsc': ifsc,
+        if (bankName != null && bankName.isNotEmpty) 'bankName': bankName,
+      },
+    );
     return DmtBeneficiary.fromJson(
-        (res.data['data']['beneficiary'] as Map).cast<String, dynamic>());
+      (unwrapApiData(res.data)['beneficiary'] as Map<String, dynamic>),
+    );
   }
 
   Future<DmtTransfer> transfer({
@@ -72,41 +84,45 @@ class DmtRepository {
     required num amount,
     String? remarks,
   }) async {
-    final res = await _client.raw.post('/dmt/transfers', data: {
-      'beneficiaryId': beneficiaryId,
-      'amount': amount,
-      if (remarks != null) 'remarks': remarks,
-    });
+    final res = await _client.raw.post(
+      '/dmt/transfers',
+      data: {
+        'beneficiaryId': beneficiaryId,
+        'amount': amount,
+        if (remarks != null) 'remarks': remarks,
+      },
+    );
     return DmtTransfer.fromJson(
-        (res.data['data']['transfer'] as Map).cast<String, dynamic>());
+      (unwrapApiData(res.data)['transfer'] as Map<String, dynamic>),
+    );
   }
 
   Future<List<DmtTransfer>> transfers() async {
     final res = await _client.raw.get('/dmt/transfers');
-    final rows = res.data['data']['transfers'] as List<dynamic>? ?? const [];
-    return rows
-        .cast<Map>()
-        .map((e) => DmtTransfer.fromJson(e.cast<String, dynamic>()))
-        .toList();
+    final rows =
+        unwrapApiData(res.data)['transfers'] as List<dynamic>? ?? const [];
+    return rows.cast<Map<String, dynamic>>().map(DmtTransfer.fromJson).toList();
   }
 }
 
 class DmtSnapshot {
-  const DmtSnapshot(
-      {required this.sender,
-      required this.beneficiaries,
-      required this.transfers});
+  const DmtSnapshot({
+    required this.sender,
+    required this.beneficiaries,
+    required this.transfers,
+  });
   final DmtSender? sender;
   final List<DmtBeneficiary> beneficiaries;
   final List<DmtTransfer> transfers;
 }
 
 class DmtSender {
-  const DmtSender(
-      {required this.id,
-      required this.mobile,
-      required this.name,
-      required this.kycStatus});
+  const DmtSender({
+    required this.id,
+    required this.mobile,
+    required this.name,
+    required this.kycStatus,
+  });
   factory DmtSender.fromJson(Map<String, dynamic> json) {
     return DmtSender(
       id: '${json['id'] ?? ''}',
