@@ -64,8 +64,7 @@ class A1TopupClient implements RechargeProvider {
 
   async recharge(input: RechargeInput): Promise<RechargeResult> {
     if (!env.A1TOPUP_API_KEY) {
-      // Mock for local dev — every recharge "succeeds" instantly.
-      return { providerTxnId: `mock_${input.clientRef}`, status: 'success', raw: { mocked: true } };
+      throw new Error('A1Topup API key is not configured');
     }
     const { data } = await this.http.post('/recharge', {
       service: input.service,

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/dio_client.dart';
@@ -14,53 +13,29 @@ class RechargeRepository {
   final DioClient _client;
 
   Future<OperatorDetection> detectOperator(String number) async {
-    try {
-      final res = await _client.raw.get(
-        '/recharge/detect-operator',
-        queryParameters: {'number': number},
-      );
-      return OperatorDetection.fromJson(
-        (res.data['data'] as Map).cast<String, dynamic>(),
-      );
-    } on DioException {
-      final clean = number.replaceAll(RegExp(r'\D'), '');
-      final operator = clean.startsWith('9')
-          ? 'Jio'
-          : clean.startsWith('8')
-              ? 'Airtel'
-              : 'Vi';
-      return OperatorDetection(
-        opid: operator == 'Jio'
-            ? '11'
-            : operator == 'Airtel'
-                ? '1'
-                : '4',
-        operatorName: operator,
-        circleCode: '5',
-        circleName: 'Delhi NCR',
-      );
-    }
+    final res = await _client.raw.get(
+      '/recharge/detect-operator',
+      queryParameters: {'number': number},
+    );
+    return OperatorDetection.fromJson(
+      (res.data['data'] as Map).cast<String, dynamic>(),
+    );
   }
 
   Future<List<MobilePlan>> mobilePlans({
     required String opid,
     required String circleCode,
   }) async {
-    try {
-      final res = await _client.raw.get(
-        '/recharge/mobile-plans',
-        queryParameters: {'opid': opid, 'circle': circleCode},
-      );
-      final rows = (res.data['data']['plans'] as List<dynamic>? ?? const []);
-      final plans = rows
-          .cast<Map<String, dynamic>>()
-          .map(MobilePlan.fromJson)
-          .where((p) => p.amount > 0)
-          .toList();
-      return plans.isEmpty ? mockPlans() : plans;
-    } on DioException {
-      return mockPlans();
-    }
+    final res = await _client.raw.get(
+      '/recharge/mobile-plans',
+      queryParameters: {'opid': opid, 'circle': circleCode},
+    );
+    final rows = (res.data['data']['plans'] as List<dynamic>? ?? const []);
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map(MobilePlan.fromJson)
+        .where((p) => p.amount > 0)
+        .toList();
   }
 
   Future<RechargeTransaction> rechargeMobile({
@@ -93,7 +68,7 @@ class RechargeRepository {
         'opid': title,
         'number': number,
         'amount': amount,
-        'mobile': '9568654684',
+        'mobile': number.replaceAll(RegExp(r'\D'), ''),
         'paymentMode': 'wallet',
       },
     );
@@ -183,37 +158,4 @@ class RechargeTransaction {
   final String? operator;
   final String? recipient;
   final String? failureReason;
-}
-
-List<MobilePlan> mockPlans() {
-  return const [
-    MobilePlan(
-      id: 'mock_199',
-      amount: 199,
-      validity: '28 days',
-      description: '1.5GB/day, unlimited calls, 100 SMS/day',
-      category: 'Popular',
-    ),
-    MobilePlan(
-      id: 'mock_239',
-      amount: 239,
-      validity: '28 days',
-      description: '2GB/day, unlimited calls, 100 SMS/day',
-      category: 'Unlimited',
-    ),
-    MobilePlan(
-      id: 'mock_299',
-      amount: 299,
-      validity: '28 days',
-      description: '2.5GB/day, unlimited calls, OTT benefits',
-      category: 'Popular',
-    ),
-    MobilePlan(
-      id: 'mock_666',
-      amount: 666,
-      validity: '84 days',
-      description: '1.5GB/day, unlimited calls, long validity',
-      category: 'Value',
-    ),
-  ];
 }

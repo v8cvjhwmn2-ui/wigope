@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme/colors.dart';
 import '../../app/theme/typography.dart';
+import '../auth/application/auth_controller.dart';
 
 class HubbleSdkConfig {
   const HubbleSdkConfig._();
@@ -26,11 +28,6 @@ class HubbleSdkConfig {
         'a0qmbxpCR9szzJstrtIugXk6BnQmVAIbBbdCV9Ttg9hyHoMNBEVjr3Z3v6sbTd28',
   );
 
-  static const mockToken = String.fromEnvironment(
-    'HUBBLE_MOCK_TOKEN',
-    defaultValue: 'mock-token',
-  );
-
   static const theme = String.fromEnvironment(
     'HUBBLE_THEME',
     defaultValue: 'light',
@@ -41,7 +38,7 @@ class HubbleSdkConfig {
     defaultValue: '0.1.0',
   );
 
-  static Uri sdkUri({String? token, String? deepLinkPath}) {
+  static Uri sdkUri({required String token, String? deepLinkPath}) {
     final base = Uri.parse(sdkBaseUrl);
     return base.replace(
       path: deepLinkPath ?? base.path,
@@ -49,12 +46,19 @@ class HubbleSdkConfig {
         'clientId': clientId,
         'appSecret': clientSecret,
         'clientSecret': clientSecret,
-        'token': token ?? mockToken,
+        'token': token,
         'theme': theme,
         'appVersion': appVersion,
         'deviceId': 'wigope-flutter',
       },
     );
+  }
+
+  static Future<String> issueSsoToken(BuildContext context) async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final dio = container.read(dioClientProvider).raw;
+    final res = await dio.post('/rewards/sso-token');
+    return '${res.data['data']['token']}';
   }
 }
 
@@ -67,7 +71,30 @@ class HubbleSdkLauncher {
       return;
     }
 
-    final uri = HubbleSdkConfig.sdkUri();
+    Uri uri;
+    try {
+      final token = await HubbleSdkConfig.issueSsoToken(context);
+      uri = HubbleSdkConfig.sdkUri(token: token);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              backgroundColor: WigopeColors.error,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              content: Text(
+                'Could not start your Hubble Rewards session.',
+                style: WigopeText.body.copyWith(color: Colors.white),
+              ),
+            ),
+          );
+      }
+      return;
+    }
     final opened = await launchUrl(
       uri,
       mode: LaunchMode.platformDefault,

@@ -9,12 +9,6 @@ import { WalletLedgerModel, WalletModel } from './wallet.model';
 
 export const walletService = {
   async profile(userId: string) {
-    if (env.SKIP_INFRA_CONNECT) {
-      return {
-        user: mockUser(userId),
-        wallet: mockWallet(),
-      };
-    }
     const user = await UserModel.findById(userId);
     if (!user) throw Err.userNotFound();
     const wallet = await ensureWallet(userId);
@@ -25,7 +19,6 @@ export const walletService = {
   },
 
   async balance(userId: string) {
-    if (env.SKIP_INFRA_CONNECT) return mockWallet();
     const wallet = await ensureWallet(userId);
     return serializeWallet(wallet);
   },
@@ -204,30 +197,6 @@ function normalizeAmount(amount: number) {
 
 function roundMoney(amount: number) {
   return Math.round(amount * 100) / 100;
-}
-
-function mockWallet() {
-  return {
-    balance: 500,
-    lockedBalance: 0,
-    lifetimeAdded: 500,
-    lifetimeSpent: 0,
-    updatedAt: new Date(),
-  };
-}
-
-function mockUser(userId: string) {
-  return {
-    id: userId,
-    mobile: '+919193658636',
-    name: 'Keshav',
-    email: null,
-    kycStatus: 'none',
-    walletBalance: 500,
-    referralCode: 'WIGOPE7',
-    role: 'user',
-    createdAt: null,
-  };
 }
 
 function buildRazorpay() {

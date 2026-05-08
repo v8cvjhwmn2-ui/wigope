@@ -257,16 +257,6 @@ export const rechargeService = {
     userId: string,
     filter: { status?: string; service?: string; limit?: number },
   ) {
-    if (env.SKIP_INFRA_CONNECT) {
-      return mockRechargeTransactions()
-        .filter((txn) => {
-          if (filter.status && txn.status !== filter.status) return false;
-          if (filter.service && txn.service !== filter.service) return false;
-          return true;
-        })
-        .slice(0, Math.min(Math.max(Number(filter.limit ?? 30), 1), 100));
-    }
-
     const query: Record<string, unknown> = {
       userId: new Types.ObjectId(userId),
       type: "recharge",
@@ -293,14 +283,6 @@ export const rechargeService = {
   },
 
   async transaction(userId: string, orderId: string) {
-    if (env.SKIP_INFRA_CONNECT) {
-      const txn = mockRechargeTransactions().find(
-        (row) => row.orderId === orderId || row.id === orderId,
-      );
-      if (!txn) throw Err.rechargeNotFound();
-      return txn;
-    }
-
     const orQuery: Array<Record<string, unknown>> = [
       { gatewayOrderId: orderId },
     ];
@@ -315,14 +297,6 @@ export const rechargeService = {
   },
 
   async pollStatus(userId: string, orderId: string) {
-    if (env.SKIP_INFRA_CONNECT) {
-      const txn = mockRechargeTransactions().find(
-        (row) => row.orderId === orderId || row.id === orderId,
-      );
-      if (!txn) throw Err.rechargeNotFound();
-      return txn;
-    }
-
     const txn = await TransactionModel.findOne({
       userId: new Types.ObjectId(userId),
       gatewayOrderId: orderId,
@@ -587,39 +561,6 @@ function serializeDevGenericRecharge(input: {
     completedAt: null,
     uatNoWalletSettlement: true,
   };
-}
-
-function mockRechargeTransactions() {
-  const now = new Date();
-  const earlier = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  return [
-    {
-      id: "DEV199",
-      orderId: "DEV199",
-      service: "mobile_prepaid",
-      operator: "Jio",
-      recipient: "9568654684",
-      amount: 199,
-      cashbackAmount: 0,
-      status: "success",
-      failureReason: null,
-      createdAt: earlier,
-      completedAt: earlier,
-    },
-    {
-      id: "DEV500",
-      orderId: "DEV500",
-      service: "fastag",
-      operator: "FASTag",
-      recipient: "UP16AB1234",
-      amount: 500,
-      cashbackAmount: 0,
-      status: "failed",
-      failureReason: "UAT provider declined this sample transaction",
-      createdAt: now,
-      completedAt: now,
-    },
-  ];
 }
 
 function mapService(service: string) {

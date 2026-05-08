@@ -58,7 +58,102 @@ type Screen =
   | 'reports'
   | 'settings';
 
-type Status = 'success' | 'pending' | 'failed' | 'refunded' | 'blocked' | 'verified';
+type Status = 'success' | 'pending' | 'failed' | 'refunded' | 'blocked' | 'verified' | 'initiated';
+
+type ChartPoint = Record<string, string | number>;
+type AdminKpis = {
+  revenue: number;
+  transactions: number;
+  successRate: number;
+  lastSettlement: number;
+  totalCashback: number;
+  users: number;
+  wallets: number;
+};
+type Transaction = {
+  id: string;
+  user: string;
+  mobile: string;
+  service: string;
+  operator: string;
+  amount: number;
+  cashbackAmount?: number;
+  status: Status;
+  paymentMode?: string;
+  time: string;
+  raw?: unknown;
+};
+type UserRow = {
+  id: string;
+  name: string;
+  mobile: string;
+  email: string;
+  kyc: string;
+  wallet: number;
+  blocked: boolean;
+  joined: string;
+  raw?: unknown;
+};
+type RechargeItem = Transaction & {
+  latency?: string;
+  request?: unknown;
+  response?: unknown;
+};
+type KycItem = {
+  id: string;
+  name: string;
+  pan: string;
+  aadhaar: string;
+  confidence: number;
+  status?: string;
+  submitted: string;
+  raw?: unknown;
+};
+type ApiLog = { id: string; method: string; path: string; status: number; latency: string; at: string };
+type WebhookEvent = { id: string; source: string; event: string; status: Status; at: string; payload: unknown };
+type Report = { title: string; rows: number; amount: number | string };
+type CommissionRow = { service: string; operator: string; mode: string; value: number; min: number; max: number };
+type AdminDashboardData = {
+  overview: {
+    kpis: AdminKpis;
+    revenueSeries: ChartPoint[];
+    transactionSeries: ChartPoint[];
+    operatorSeries: ChartPoint[];
+    recentTransactions: Transaction[];
+  };
+  users: UserRow[];
+  transactions: Transaction[];
+  rechargeStream: RechargeItem[];
+  kycQueue: KycItem[];
+  apiLogs: ApiLog[];
+  webhookEvents: WebhookEvent[];
+  reports: Report[];
+};
+
+const emptyDashboard: AdminDashboardData = {
+  overview: {
+    kpis: {
+      revenue: 0,
+      transactions: 0,
+      successRate: 0,
+      lastSettlement: 0,
+      totalCashback: 0,
+      users: 0,
+      wallets: 0,
+    },
+    revenueSeries: [],
+    transactionSeries: [],
+    operatorSeries: [],
+    recentTransactions: [],
+  },
+  users: [],
+  transactions: [],
+  rechargeStream: [],
+  kycQueue: [],
+  apiLogs: [],
+  webhookEvents: [],
+  reports: [],
+};
 
 const nav: Array<{ id: Screen; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -73,249 +168,149 @@ const nav: Array<{ id: Screen; label: string; icon: typeof LayoutDashboard }> = 
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-const revenueData = Array.from({ length: 12 }, (_, i) => ({
-  day: `W${i + 1}`,
-  revenue: [86000, 98000, 92000, 128000, 151000, 143000, 176000, 193000, 188000, 214000, 232000, 251000][i],
-  transactions: [420, 510, 488, 642, 711, 690, 812, 910, 885, 1002, 1094, 1180][i],
-}));
+const transactions: Transaction[] = [];
+const users: UserRow[] = [];
+const rechargeStreamSeed: RechargeItem[] = [];
+const kycItems: KycItem[] = [];
+const apiLogs: ApiLog[] = [];
+const webhookEvents: WebhookEvent[] = [];
+const reports: Report[] = [];
 
-const stackedData = [
-  { name: 'Mon', recharge: 320, bills: 210, rewards: 90 },
-  { name: 'Tue', recharge: 380, bills: 240, rewards: 112 },
-  { name: 'Wed', recharge: 420, bills: 270, rewards: 138 },
-  { name: 'Thu', recharge: 470, bills: 295, rewards: 151 },
-  { name: 'Fri', recharge: 530, bills: 320, rewards: 178 },
-  { name: 'Sat', recharge: 610, bills: 360, rewards: 210 },
-  { name: 'Sun', recharge: 580, bills: 345, rewards: 202 },
-];
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, { cache: 'no-store', ...init });
+  const text = await response.text();
+  let payload: unknown = null;
 
-const operatorData = [
-  { name: 'Jio', value: 1380 },
-  { name: 'Airtel', value: 1120 },
-  { name: 'Vi', value: 860 },
-  { name: 'FASTag', value: 640 },
-  { name: 'Electricity', value: 580 },
-];
+  if (text.trim()) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(`Invalid JSON from ${url}`);
+    }
+  }
 
-const transactions = [
-  {
-    id: 'TXN2405078451',
-    user: 'Keshav Swami',
-    mobile: '9568654684',
-    service: 'Prepaid',
-    operator: 'Jio',
-    amount: 199,
-    status: 'success' as Status,
-    time: '07 May, 8:44 PM',
-  },
-  {
-    id: 'TXN2405077520',
-    user: 'Anshika Verma',
-    mobile: '9193658636',
-    service: 'FASTag',
-    operator: 'ICICI FASTag',
-    amount: 500,
-    status: 'failed' as Status,
-    time: '07 May, 5:02 PM',
-  },
-  {
-    id: 'TXN2405076221',
-    user: 'Rahul Sharma',
-    mobile: '9876543210',
-    service: 'Electricity',
-    operator: 'UPPCL',
-    amount: 1312,
-    status: 'pending' as Status,
-    time: '07 May, 3:18 PM',
-  },
-  {
-    id: 'TXN2405075574',
-    user: 'Neha Singh',
-    mobile: '7894561230',
-    service: 'Rewards',
-    operator: 'Amazon Voucher',
-    amount: 1000,
-    status: 'success' as Status,
-    time: '07 May, 1:55 PM',
-  },
-  {
-    id: 'TXN2405069913',
-    user: 'Mohit Arora',
-    mobile: '9812345678',
-    service: 'DTH',
-    operator: 'Tata Play',
-    amount: 399,
-    status: 'refunded' as Status,
-    time: '06 May, 9:40 PM',
-  },
-];
+  if (!response.ok) {
+    const message =
+      typeof payload === 'object' && payload && 'error' in payload
+        ? ((payload as { error?: { message?: string } }).error?.message ?? response.statusText)
+        : response.statusText;
+    throw new Error(message || `Request failed: ${response.status}`);
+  }
 
-type Transaction = (typeof transactions)[number];
+  return payload as T;
+}
 
-const users = [
-  {
-    id: 'USR1001',
-    name: 'Keshav Swami',
-    mobile: '9568654684',
-    email: 'keshav@wigope.com',
-    kyc: 'verified',
-    wallet: 1200,
-    blocked: false,
-    joined: '02 May 2026',
-  },
-  {
-    id: 'USR1002',
-    name: 'Anshika Verma',
-    mobile: '9193658636',
-    email: 'anshika@example.com',
-    kyc: 'pending',
-    wallet: 80,
-    blocked: false,
-    joined: '06 May 2026',
-  },
-  {
-    id: 'USR1003',
-    name: 'Rahul Sharma',
-    mobile: '9876543210',
-    email: 'rahul@example.com',
-    kyc: 'none',
-    wallet: 0,
-    blocked: true,
-    joined: '07 May 2026',
-  },
-  {
-    id: 'USR1004',
-    name: 'Neha Singh',
-    mobile: '7894561230',
-    email: 'neha@example.com',
-    kyc: 'verified',
-    wallet: 2450,
-    blocked: false,
-    joined: '04 May 2026',
-  },
-];
+function normalizeStatus(value: unknown): Status {
+  const status = typeof value === 'string' ? value.toLowerCase() : '';
+  if (['success', 'pending', 'failed', 'refunded', 'blocked', 'verified', 'initiated'].includes(status)) {
+    return status as Status;
+  }
+  return 'pending';
+}
 
-const rechargeStreamSeed = [
-  {
-    id: 'RCG_9074',
-    mobile: '9568654684',
-    operator: 'Jio',
-    amount: 199,
-    status: 'success' as Status,
-    latency: '2.1s',
-    request: { opid: '11', number: '956****684', amount: 199, provider: 'KwikAPI UAT' },
-    response: { status: 'SUCCESS', providerTxnId: 'KWK8472201', message: 'Recharge accepted' },
-  },
-  {
-    id: 'RCG_9073',
-    mobile: '9193658636',
-    operator: 'Vi',
-    amount: 299,
-    status: 'pending' as Status,
-    latency: '8.4s',
-    request: { opid: '14', number: '919****636', amount: 299, provider: 'KwikAPI UAT' },
-    response: { status: 'PENDING', providerTxnId: 'KWK8472199', message: 'Awaiting operator status' },
-  },
-  {
-    id: 'RCG_9072',
-    mobile: '9876543210',
-    operator: 'Airtel',
-    amount: 239,
-    status: 'failed' as Status,
-    latency: '1.8s',
-    request: { opid: '7', number: '987****210', amount: 239, provider: 'KwikAPI UAT' },
-    response: { status: 'FAILURE', providerTxnId: null, message: 'Operator rejected' },
-  },
-];
-
-const kycItems = [
-  {
-    id: 'KYC-2201',
-    name: 'Anshika Verma',
-    pan: 'BXCPA****F',
-    aadhaar: 'XXXX XXXX 7812',
-    confidence: 94,
-    submitted: '07 May, 6:22 PM',
-  },
-  {
-    id: 'KYC-2202',
-    name: 'Mohit Arora',
-    pan: 'DRSPA****K',
-    aadhaar: 'XXXX XXXX 1190',
-    confidence: 87,
-    submitted: '07 May, 4:09 PM',
-  },
-];
-
-const apiLogs = [
-  { id: 'LOG-901', method: 'POST', path: '/api/v1/auth/verify-otp', status: 200, latency: '84ms', at: '21:38:12' },
-  { id: 'LOG-902', method: 'POST', path: '/api/v1/recharge/mobile', status: 202, latency: '1290ms', at: '21:37:48' },
-  { id: 'LOG-903', method: 'GET', path: '/api/v1/wallet/balance', status: 200, latency: '41ms', at: '21:37:18' },
-  { id: 'LOG-904', method: 'POST', path: '/api/v1/hubble/sso', status: 200, latency: '66ms', at: '21:36:54' },
-];
-
-const webhookEvents = [
-  { id: 'WH-501', source: 'Hubble', event: 'transaction.completed', status: 'success' as Status, at: '21:20', payload: { brand: 'Amazon', amount: 1000, orderStatus: 'COMPLETED' } },
-  { id: 'WH-502', source: 'KwikAPI', event: 'recharge.pending', status: 'pending' as Status, at: '20:58', payload: { orderId: 'RCG_9073', status: 'PENDING' } },
-  { id: 'WH-503', source: 'Razorpay', event: 'payment.failed', status: 'failed' as Status, at: '20:40', payload: { paymentId: 'pay_mock_882', reason: 'UAT failure' } },
-];
-
-const reports = [
-  { title: 'Daily revenue', rows: 128, amount: '₹2.51L', icon: FileBarChart2 },
-  { title: 'GST report', rows: 42, amount: '₹18,420', icon: FileDown },
-  { title: 'Operator-wise volume', rows: 18, amount: '4,202 txns', icon: Gauge },
-  { title: 'User growth', rows: 612, amount: '+18.4%', icon: Users },
-];
+function normalizeDashboard(value?: Partial<AdminDashboardData>): AdminDashboardData {
+  const source = value ?? {};
+  const overview = source.overview ?? emptyDashboard.overview;
+  return {
+    overview: {
+      kpis: { ...emptyDashboard.overview.kpis, ...(overview.kpis ?? {}) },
+      revenueSeries: Array.isArray(overview.revenueSeries) ? overview.revenueSeries : [],
+      transactionSeries: Array.isArray(overview.transactionSeries) ? overview.transactionSeries : [],
+      operatorSeries: Array.isArray(overview.operatorSeries) ? overview.operatorSeries : [],
+      recentTransactions: Array.isArray(overview.recentTransactions)
+        ? overview.recentTransactions.map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }))
+        : [],
+    },
+    users: Array.isArray(source.users) ? source.users : [],
+    transactions: Array.isArray(source.transactions)
+      ? source.transactions.map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }))
+      : [],
+    rechargeStream: Array.isArray(source.rechargeStream)
+      ? source.rechargeStream.map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }))
+      : [],
+    kycQueue: Array.isArray(source.kycQueue) ? source.kycQueue : [],
+    apiLogs: Array.isArray(source.apiLogs) ? source.apiLogs : [],
+    webhookEvents: Array.isArray(source.webhookEvents)
+      ? source.webhookEvents.map((event) => ({ ...event, status: normalizeStatus(event.status) }))
+      : [],
+    reports: Array.isArray(source.reports) ? source.reports : [],
+  };
+}
 
 export default function AdminPage() {
-  const [authStep, setAuthStep] = useState<'login' | 'otp' | 'done'>('login');
+  const [authStep, setAuthStep] = useState<'checking' | 'login' | 'done'>('checking');
   const [screen, setScreen] = useState<Screen>('overview');
   const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<(typeof users)[number] | null>(null);
-  const [selectedRecharge, setSelectedRecharge] = useState<(typeof rechargeStreamSeed)[number] | null>(null);
-  const [selectedWebhook, setSelectedWebhook] = useState<(typeof webhookEvents)[number] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [selectedRecharge, setSelectedRecharge] = useState<RechargeItem | null>(null);
+  const [selectedWebhook, setSelectedWebhook] = useState<WebhookEvent | null>(null);
+  const [dashboard, setDashboard] = useState<AdminDashboardData>(emptyDashboard);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [kycQueue, setKycQueue] = useState(kycItems);
   const [rechargeStream, setRechargeStream] = useState(rechargeStreamSeed);
-  const [commissionRows, setCommissionRows] = useState([
-    { service: 'Prepaid', operator: 'Jio', mode: 'percent', value: 3.8, min: 0, max: 200 },
-    { service: 'DTH', operator: 'Tata Play', mode: 'percent', value: 4.1, min: 1, max: 250 },
-    { service: 'FASTag', operator: 'ICICI FASTag', mode: 'percent', value: 2, min: 0, max: 150 },
-    { service: 'Rewards', operator: 'Amazon Voucher', mode: 'fixed', value: 12, min: 0, max: 300 },
-  ]);
-  const [auditLog, setAuditLog] = useState([
-    '21:31 · System synced KwikAPI UAT operator catalogue',
-    '21:08 · Admin enabled Hubble staging rewards',
-    '20:44 · Wallet topup bonus changed to upto ₹200',
-  ]);
+  const [commissionRows, setCommissionRows] = useState<CommissionRow[]>([]);
+  const [auditLog, setAuditLog] = useState<string[]>([]);
 
   useEffect(() => {
-    if (screen !== 'recharges') return;
-    const timer = window.setInterval(() => {
-      setRechargeStream((items) => {
-        const next = {
-          ...items[0],
-          id: `RCG_${Math.floor(9100 + Math.random() * 99)}`,
-          latency: `${(1 + Math.random() * 4).toFixed(1)}s`,
-          status: Math.random() > 0.72 ? ('pending' as Status) : ('success' as Status),
-        };
-        return [next, ...items].slice(0, 8);
-      });
-    }, 10000);
-    return () => window.clearInterval(timer);
-  }, [screen]);
+    let active = true;
+    fetch('/api/admin/me', { cache: 'no-store' })
+      .then((res) => {
+        if (!active) return;
+        setAuthStep(res.ok ? 'done' : 'login');
+      })
+      .catch(() => active && setAuthStep('login'));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authStep !== 'done') return;
+    let active = true;
+
+    async function loadDashboard() {
+      setDashboardLoading(true);
+      setDashboardError(null);
+      try {
+        const json = await fetchJson<{ data?: AdminDashboardData }>('/api/admin/dashboard');
+        if (!active) return;
+        const next = normalizeDashboard(json.data);
+        setDashboard(next);
+        setRechargeStream(next.rechargeStream);
+        setKycQueue(next.kycQueue);
+      } catch (error) {
+        if (!active) return;
+        setDashboardError(error instanceof Error ? error.message : 'Admin dashboard load failed');
+      } finally {
+        if (active) setDashboardLoading(false);
+      }
+    }
+
+    loadDashboard();
+    const timer = window.setInterval(loadDashboard, screen === 'recharges' ? 10_000 : 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [authStep, screen]);
 
   const filteredTransactions = useMemo(() => {
     const q = search.toLowerCase();
-    return transactions.filter((txn) =>
+    return dashboard.transactions.filter((txn) =>
       [txn.id, txn.mobile, txn.user, txn.operator, txn.service, txn.status].some((v) =>
         String(v).toLowerCase().includes(q),
       ),
     );
-  }, [search]);
+  }, [dashboard.transactions, search]);
 
-  const exportRows = (name: string, rows: Record<string, unknown>[]) => {
-    const headers = Object.keys(rows[0] ?? {});
-    const csv = [headers.join(','), ...rows.map((row) => headers.map((h) => JSON.stringify(row[h] ?? '')).join(','))].join('\n');
+  const exportRows = (name: string, rows: unknown[]) => {
+    const normalizedRows = rows.map((row) => row as Record<string, unknown>);
+    if (normalizedRows.length === 0) {
+      return;
+    }
+    const headers = Object.keys(normalizedRows[0] ?? {});
+    const csv = [headers.join(','), ...normalizedRows.map((row) => headers.map((h) => JSON.stringify(row[h] ?? '')).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -325,8 +320,14 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   };
 
+  async function logout() {
+    await fetch('/api/admin/logout', { method: 'POST' }).catch(() => null);
+    setDashboard(emptyDashboard);
+    setAuthStep('login');
+  }
+
   if (authStep !== 'done') {
-    return <AdminAuth step={authStep} setStep={setAuthStep} />;
+    return <AdminAuth checking={authStep === 'checking'} onAuthed={() => setAuthStep('done')} />;
   }
 
   return (
@@ -387,11 +388,14 @@ export default function AdminPage() {
               <div className="flex items-center gap-3">
                 <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-white px-3 py-2 text-sm font-semibold text-ink-secondary md:flex">
                   <ShieldCheck className="h-4 w-4 text-success" />
-                  2FA active
+                  Session active
                 </div>
                 <button className="rounded-full border border-border-soft bg-white p-3 text-ink-secondary shadow-card">
                   <Bell className="h-5 w-5" />
                 </button>
+                <Button variant="secondary" size="sm" onClick={logout}>
+                  Logout
+                </Button>
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-wigope-navy-900 text-sm font-black text-white">
                   KS
                 </div>
@@ -416,8 +420,26 @@ export default function AdminPage() {
           </header>
 
           <div className="mx-auto max-w-7xl space-y-6 px-5 py-6 lg:px-8">
-            {screen === 'overview' && <Overview exportRows={exportRows} />}
-            {screen === 'users' && <UsersScreen search={search} setSearch={setSearch} setSelectedUser={setSelectedUser} />}
+            {dashboardError && (
+              <div className="rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                {dashboardError}
+              </div>
+            )}
+            {screen === 'overview' && (
+              <Overview
+                data={dashboard.overview}
+                loading={dashboardLoading}
+                exportRows={exportRows}
+              />
+            )}
+            {screen === 'users' && (
+              <UsersScreen
+                users={dashboard.users}
+                search={search}
+                setSearch={setSearch}
+                setSelectedUser={setSelectedUser}
+              />
+            )}
             {screen === 'transactions' && (
               <TransactionsScreen
                 search={search}
@@ -438,9 +460,11 @@ export default function AdminPage() {
               />
             )}
             {screen === 'kyc' && <KycScreen items={kycQueue} setItems={setKycQueue} />}
-            {screen === 'logs' && <LogsScreen />}
-            {screen === 'webhooks' && <WebhooksScreen setSelectedWebhook={setSelectedWebhook} />}
-            {screen === 'reports' && <ReportsScreen exportRows={exportRows} />}
+            {screen === 'logs' && <LogsScreen logs={dashboard.apiLogs} />}
+            {screen === 'webhooks' && (
+              <WebhooksScreen events={dashboard.webhookEvents} setSelectedWebhook={setSelectedWebhook} />
+            )}
+            {screen === 'reports' && <ReportsScreen reports={dashboard.reports} exportRows={exportRows} />}
             {screen === 'settings' && <SettingsScreen auditLog={auditLog} />}
           </div>
         </section>
@@ -465,14 +489,30 @@ export default function AdminPage() {
   );
 }
 
-function AdminAuth({
-  step,
-  setStep,
-}: {
-  step: 'login' | 'otp';
-  setStep: (step: 'login' | 'otp' | 'done') => void;
-}) {
+function AdminAuth({ checking, onAuthed }: { checking: boolean; onAuthed: () => void }) {
+  const [email, setEmail] = useState('admin@wigope.com');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit() {
+    setLoading(true);
+    setError(null);
+    try {
+      await fetchJson('/api/admin/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password, otp }),
+      });
+      onAuthed();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Admin login failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="bg-grid flex min-h-screen items-center justify-center bg-white px-5">
       <section className="w-full max-w-md rounded-[28px] border border-border-soft bg-white p-7 shadow-hero">
@@ -488,41 +528,52 @@ function AdminAuth({
         <div className="mt-8 rounded-card bg-grad-orange-soft p-5">
           <LockKeyhole className="h-7 w-7 text-wigope-orange-600" />
           <h1 className="mt-3 font-display text-3xl font-extrabold text-wigope-navy-900">
-            {step === 'login' ? 'Admin sign in' : 'Verify 2FA'}
+            {checking ? 'Checking session' : 'Admin sign in'}
           </h1>
           <p className="mt-2 text-sm leading-6 text-ink-secondary">
-            {step === 'login'
-              ? 'Use admin credentials, then confirm the one-time code.'
-              : 'Demo code is 123456 for local Phase 9 testing.'}
+            Use admin credentials and the configured access code to open the production control room.
           </p>
         </div>
-        {step === 'login' ? (
-          <div className="mt-6 space-y-4">
-            <Field label="Email" value="admin@wigope.com" readOnly />
-            <Field label="Password" value="••••••••••" readOnly />
-            <Button className="w-full" size="lg" onClick={() => setStep('otp')}>
-              Continue to 2FA
+        {!checking && (
+          <form
+            className="mt-6 space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit();
+            }}
+          >
+            <Field label="Email" value={email} onChange={(event) => setEmail(event.target.value)} />
+            <Field label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Admin password" />
+            <Field label="Access code" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="Configured 2FA code" />
+            {error && (
+              <div className="rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                {error}
+              </div>
+            )}
+            <Button className="w-full" size="lg" disabled={loading || !email || !password || otp.length < 6}>
+              {loading ? 'Signing in...' : 'Open dashboard'}
             </Button>
-          </div>
-        ) : (
-          <div className="mt-6 space-y-4">
-            <Field label="2FA code" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="123456" />
-            <Button className="w-full" size="lg" onClick={() => setStep('done')} disabled={otp.length < 6}>
-              Open dashboard
-            </Button>
-          </div>
+          </form>
         )}
       </section>
     </main>
   );
 }
 
-function Overview({ exportRows }: { exportRows: (name: string, rows: Record<string, unknown>[]) => void }) {
+function Overview({
+  data,
+  loading,
+  exportRows,
+}: {
+  data: AdminDashboardData['overview'];
+  loading: boolean;
+  exportRows: (name: string, rows: unknown[]) => void;
+}) {
   const kpis = [
-    { label: 'Revenue', value: '₹2.51L', delta: '+18.4%', icon: BadgeIndianRupee },
-    { label: 'Transactions', value: '4,202', delta: '+11.2%', icon: Activity },
-    { label: 'Success Rate', value: '97.8%', delta: '+2.1%', icon: CheckCircle2 },
-    { label: 'Last Settlement', value: '₹84,300', delta: 'Today 6 PM', icon: ShieldCheck },
+    { label: 'Revenue', value: formatINR(data.kpis.revenue), delta: 'Live gross volume', icon: BadgeIndianRupee },
+    { label: 'Transactions', value: String(data.kpis.transactions), delta: 'All statuses', icon: Activity },
+    { label: 'Success Rate', value: `${data.kpis.successRate.toFixed(1)}%`, delta: 'Provider settled', icon: CheckCircle2 },
+    { label: 'Last Settlement', value: formatINR(data.kpis.lastSettlement), delta: 'Awaiting settlement feed', icon: ShieldCheck },
   ];
 
   return (
@@ -532,13 +583,13 @@ function Overview({ exportRows }: { exportRows: (name: string, rows: Record<stri
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.24em] text-wigope-orange-600">Admin command center</p>
             <h2 className="mt-2 font-display text-4xl font-extrabold text-wigope-navy-900">
-              Welcome back, Keshav 👋
+              Welcome back
             </h2>
             <p className="mt-2 max-w-2xl text-ink-secondary">
               Monitor revenue, recharges, KYC risk, wallet movements, provider logs, and settlement health from one panel.
             </p>
           </div>
-          <Button onClick={() => exportRows('recent-transactions', transactions)}>
+          <Button onClick={() => exportRows('recent-transactions', data.recentTransactions)}>
             <Download className="h-4 w-4" />
             Export today
           </Button>
@@ -567,49 +618,55 @@ function Overview({ exportRows }: { exportRows: (name: string, rows: Record<stri
 
       <section className="grid gap-5 xl:grid-cols-[1.3fr_0.9fr]">
         <ChartCard title="Revenue line chart" subtitle="Last 90 days · orange line">
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={revenueData}>
-              <CartesianGrid stroke="#E8EAF0" strokeDasharray="4 4" />
-              <XAxis dataKey="day" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => `₹${Number(v) / 1000}k`} />
-              <Tooltip formatter={(v) => formatINR(Number(v))} />
-              <Line type="monotone" dataKey="revenue" stroke="#F97316" strokeWidth={3} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          {loading ? <PanelSkeleton /> : data.revenueSeries.length ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={data.revenueSeries}>
+                <CartesianGrid stroke="#E8EAF0" strokeDasharray="4 4" />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => `₹${Number(v) / 1000}k`} />
+                <Tooltip formatter={(v) => formatINR(Number(v))} />
+                <Line type="monotone" dataKey="revenue" stroke="#F97316" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : <EmptyState title="No revenue yet" body="Successful recharge and wallet transactions will appear here." />}
         </ChartCard>
 
         <ChartCard title="Top operators" subtitle="Volume by operator">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={operatorData} layout="vertical">
-              <CartesianGrid stroke="#E8EAF0" strokeDasharray="4 4" />
-              <XAxis type="number" hide />
-              <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={80} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#F97316" radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {loading ? <PanelSkeleton /> : data.operatorSeries.length ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={data.operatorSeries} layout="vertical">
+                <CartesianGrid stroke="#E8EAF0" strokeDasharray="4 4" />
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={80} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#F97316" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <EmptyState title="No operator volume" body="Operator analytics will populate from live recharge transactions." />}
         </ChartCard>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <ChartCard title="Transactions stacked area" subtitle="Recharge, bills, rewards">
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={stackedData}>
-              <CartesianGrid stroke="#E8EAF0" strokeDasharray="4 4" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} />
-              <Tooltip />
-              <Area type="monotone" dataKey="recharge" stackId="1" fill="#F97316" stroke="#F97316" />
-              <Area type="monotone" dataKey="bills" stackId="1" fill="#3B82F6" stroke="#3B82F6" />
-              <Area type="monotone" dataKey="rewards" stackId="1" fill="#10B981" stroke="#10B981" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {loading ? <PanelSkeleton /> : data.transactionSeries.length ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={data.transactionSeries}>
+                <CartesianGrid stroke="#E8EAF0" strokeDasharray="4 4" />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Area type="monotone" dataKey="recharge" stackId="1" fill="#F97316" stroke="#F97316" />
+                <Area type="monotone" dataKey="bills" stackId="1" fill="#3B82F6" stroke="#3B82F6" />
+                <Area type="monotone" dataKey="rewards" stackId="1" fill="#10B981" stroke="#10B981" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : <EmptyState title="No transaction mix" body="Recharge, bill and reward categories will appear after live usage." />}
         </ChartCard>
         <Card className="overflow-hidden">
           <SectionHeader title="Recent transactions" subtitle="Last 20, newest first" />
           <DataTable
             headers={['Txn ID', 'User', 'Service', 'Amount', 'Status']}
-            rows={transactions.map((txn) => [
+            rows={data.recentTransactions.map((txn) => [
               txn.id,
               txn.user,
               txn.service,
@@ -617,6 +674,7 @@ function Overview({ exportRows }: { exportRows: (name: string, rows: Record<stri
               <StatusPill key={txn.id} status={txn.status} />,
             ])}
           />
+          {data.recentTransactions.length === 0 && <EmptyState title="No transactions yet" body="Live transactions will show up here automatically." />}
         </Card>
       </section>
     </>
@@ -624,17 +682,19 @@ function Overview({ exportRows }: { exportRows: (name: string, rows: Record<stri
 }
 
 function UsersScreen({
+  users,
   search,
   setSearch,
   setSelectedUser,
 }: {
+  users: UserRow[];
   search: string;
   setSearch: (value: string) => void;
-  setSelectedUser: (user: (typeof users)[number]) => void;
+  setSelectedUser: (user: UserRow) => void;
 }) {
   const q = search.toLowerCase();
   const filtered = users.filter((user) =>
-    [user.name, user.mobile, user.email, user.kyc].some((v) => v.toLowerCase().includes(q)),
+    [user.name, user.mobile, user.email, user.kyc].some((v) => String(v).toLowerCase().includes(q)),
   );
 
   return (
@@ -662,6 +722,7 @@ function UsersScreen({
           user.joined,
         ])}
       />
+      {filtered.length === 0 && <EmptyState title="No users found" body="Users will appear here after OTP login creates their account." />}
     </Card>
   );
 }
@@ -675,7 +736,7 @@ function TransactionsScreen({
   search: string;
   setSearch: (value: string) => void;
   transactions: Transaction[];
-  exportRows: (name: string, rows: Record<string, unknown>[]) => void;
+  exportRows: (name: string, rows: unknown[]) => void;
 }) {
   return (
     <Card>
@@ -716,6 +777,7 @@ function TransactionsScreen({
           txn.time,
         ])}
       />
+      {transactions.length === 0 && <EmptyState title="No transactions found" body="Recharge, deposits, refunds and cashback entries will appear here." />}
     </Card>
   );
 }
@@ -724,8 +786,8 @@ function RechargesScreen({
   items,
   setSelectedRecharge,
 }: {
-  items: typeof rechargeStreamSeed;
-  setSelectedRecharge: (item: (typeof rechargeStreamSeed)[number]) => void;
+  items: RechargeItem[];
+  setSelectedRecharge: (item: RechargeItem) => void;
 }) {
   return (
     <Card>
@@ -753,6 +815,7 @@ function RechargesScreen({
           </button>
         ))}
       </div>
+      {items.length === 0 && <EmptyState title="No recharge stream yet" body="Live recharge requests will stream here from the backend." />}
     </Card>
   );
 }
@@ -763,8 +826,8 @@ function CommissionsScreen({
   auditLog,
   setAuditLog,
 }: {
-  rows: Array<{ service: string; operator: string; mode: string; value: number; min: number; max: number }>;
-  setRows: (rows: Array<{ service: string; operator: string; mode: string; value: number; min: number; max: number }>) => void;
+  rows: CommissionRow[];
+  setRows: (rows: CommissionRow[]) => void;
   auditLog: string[];
   setAuditLog: (rows: string[]) => void;
 }) {
@@ -808,8 +871,8 @@ function KycScreen({
   items,
   setItems,
 }: {
-  items: typeof kycItems;
-  setItems: (items: typeof kycItems) => void;
+  items: KycItem[];
+  setItems: (items: KycItem[]) => void;
 }) {
   return (
     <Card>
@@ -848,13 +911,13 @@ function KycScreen({
   );
 }
 
-function LogsScreen() {
+function LogsScreen({ logs }: { logs: ApiLog[] }) {
   return (
     <Card>
       <SectionHeader title="API Logs" subtitle="Last 7 days · filterable and searchable" action={<SearchBox value="" onChange={() => null} placeholder="Search path" />} />
       <DataTable
         headers={['ID', 'Method', 'Path', 'Status', 'Latency', 'Time']}
-        rows={apiLogs.map((log) => [
+        rows={logs.map((log) => [
           log.id,
           <span key={log.id} className="font-black text-wigope-orange-600">{log.method}</span>,
           log.path,
@@ -863,17 +926,24 @@ function LogsScreen() {
           log.at,
         ])}
       />
+      {logs.length === 0 && <EmptyState title="No API logs yet" body="Request log persistence is ready for wiring; no stored log rows were returned." />}
     </Card>
   );
 }
 
-function WebhooksScreen({ setSelectedWebhook }: { setSelectedWebhook: (event: (typeof webhookEvents)[number]) => void }) {
+function WebhooksScreen({
+  events,
+  setSelectedWebhook,
+}: {
+  events: WebhookEvent[];
+  setSelectedWebhook: (event: WebhookEvent) => void;
+}) {
   return (
     <Card>
       <SectionHeader title="Webhooks" subtitle="Events, processing status, payload viewer and retry controls" />
       <DataTable
         headers={['ID', 'Source', 'Event', 'Status', 'Time', 'Action']}
-        rows={webhookEvents.map((event) => [
+        rows={events.map((event) => [
           event.id,
           event.source,
           event.event,
@@ -885,28 +955,38 @@ function WebhooksScreen({ setSelectedWebhook }: { setSelectedWebhook: (event: (t
           </div>,
         ])}
       />
+      {events.length === 0 && <EmptyState title="No webhook events stored" body="Webhook monitor will show events once webhook persistence is enabled." />}
     </Card>
   );
 }
 
-function ReportsScreen({ exportRows }: { exportRows: (name: string, rows: Record<string, unknown>[]) => void }) {
+function ReportsScreen({
+  reports,
+  exportRows,
+}: {
+  reports: Report[];
+  exportRows: (name: string, rows: unknown[]) => void;
+}) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {reports.map((report) => {
-        const Icon = report.icon;
+        const Icon = FileBarChart2;
         return (
           <Card key={report.title} className="p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wigope-orange-50 text-wigope-orange-600">
               <Icon className="h-6 w-6" />
             </div>
             <h3 className="mt-5 font-display text-xl font-extrabold">{report.title}</h3>
-            <p className="mt-1 text-sm text-ink-secondary">{report.rows} rows · {report.amount}</p>
-            <Button variant="secondary" className="mt-5 w-full" onClick={() => exportRows(report.title, transactions)}>
+            <p className="mt-1 text-sm text-ink-secondary">
+              {report.rows} rows · {typeof report.amount === 'number' ? formatINR(report.amount) : report.amount}
+            </p>
+            <Button variant="secondary" className="mt-5 w-full" onClick={() => exportRows(report.title, [report])}>
               Export
             </Button>
           </Card>
         );
       })}
+      {reports.length === 0 && <EmptyState title="No reports yet" body="Report cards will populate from live transactions and wallet ledger." />}
     </div>
   );
 }
@@ -967,11 +1047,13 @@ function SettingsScreen({ auditLog }: { auditLog: string[] }) {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/admin/runtime-config', { cache: 'no-store' })
-      .then((res) => res.json())
+    fetchJson<{ data?: RuntimeConfigResponse }>('/api/admin/runtime-config')
       .then((json) => {
         if (!active) return;
-        const data = (json.data ?? json) as RuntimeConfigResponse;
+        const data = json.data;
+        if (!data || !Array.isArray(data.settings)) {
+          throw new Error('Runtime config response is incomplete.');
+        }
         setConfig(data);
         setDraft(
           Object.fromEntries(
@@ -1001,13 +1083,11 @@ function SettingsScreen({ auditLog }: { auditLog: string[] }) {
       settings[key] = value;
     }
     try {
-      const res = await fetch('/api/admin/runtime-config', {
+      const json = await fetchJson<{ data: RuntimeConfigResponse }>('/api/admin/runtime-config', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ settings }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message ?? 'Config save failed');
       const data = json.data as RuntimeConfigResponse;
       setConfig(data);
       setDraft((current) => ({
@@ -1026,13 +1106,11 @@ function SettingsScreen({ auditLog }: { auditLog: string[] }) {
     setTestingSms(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/admin/runtime-config/test-sms', {
+      const json = await fetchJson<{ data: { sentTo: string } }>('/api/admin/runtime-config/test-sms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ mobile: testMobile }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message ?? 'SMS test failed');
       setMessage(`Live OTP SMS sent to ${json.data.sentTo}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'SMS test failed');
@@ -1133,14 +1211,12 @@ function SettingsScreen({ auditLog }: { auditLog: string[] }) {
           </Button>
         </div>
 
-        <SectionHeader title="Admin users" subtitle="2FA and roles" />
+        <SectionHeader title="Admin access" subtitle="Configured via production environment variables" />
         <div className="space-y-3 p-5 pt-0">
-          {['Keshav · super_admin · 2FA on', 'Ops Lead · admin · 2FA on', 'Support · analyst · 2FA required'].map((admin) => (
-            <div key={admin} className="flex items-center gap-3 rounded-card border border-border-soft p-3">
-              <Fingerprint className="h-5 w-5 text-success" />
-              <span className="text-sm font-bold">{admin}</span>
-            </div>
-          ))}
+          <div className="flex items-center gap-3 rounded-card border border-border-soft p-3">
+            <Fingerprint className="h-5 w-5 text-success" />
+            <span className="text-sm font-bold">super_admin · password + access code required</span>
+          </div>
         </div>
         <SectionHeader title="Audit log" subtitle="Recent config changes" />
         <div className="space-y-3 p-5 pt-0">
@@ -1153,7 +1229,7 @@ function SettingsScreen({ auditLog }: { auditLog: string[] }) {
   );
 }
 
-function UserDrawer({ user, onClose }: { user: (typeof users)[number]; onClose: () => void }) {
+function UserDrawer({ user, onClose }: { user: UserRow; onClose: () => void }) {
   return (
     <Drawer title={user.name} subtitle={`${user.id} · +91 ${user.mobile}`} onClose={onClose}>
       <div className="space-y-5">
@@ -1286,6 +1362,7 @@ function StatusPill({ status, label }: { status: Status; label?: string }) {
     success: 'bg-success/10 text-success',
     verified: 'bg-success/10 text-success',
     pending: 'bg-warning/10 text-warning',
+    initiated: 'bg-info/10 text-info',
     failed: 'bg-danger/10 text-danger',
     refunded: 'bg-info/10 text-info',
     blocked: 'bg-danger/10 text-danger',
@@ -1294,6 +1371,7 @@ function StatusPill({ status, label }: { status: Status; label?: string }) {
     success: <CheckCircle2 className="h-3.5 w-3.5" />,
     verified: <ShieldCheck className="h-3.5 w-3.5" />,
     pending: <RefreshCcw className="h-3.5 w-3.5" />,
+    initiated: <RefreshCcw className="h-3.5 w-3.5" />,
     failed: <XCircle className="h-3.5 w-3.5" />,
     refunded: <RefreshCcw className="h-3.5 w-3.5" />,
     blocked: <XCircle className="h-3.5 w-3.5" />,
@@ -1367,6 +1445,14 @@ function EmptyState({ title, body }: { title: string; body: string }) {
       <ListChecks className="mx-auto h-10 w-10 text-wigope-orange-600" />
       <h3 className="mt-3 font-display text-xl font-extrabold">{title}</h3>
       <p className="mt-1 text-sm text-ink-secondary">{body}</p>
+    </div>
+  );
+}
+
+function PanelSkeleton() {
+  return (
+    <div className="h-[280px] animate-pulse rounded-[20px] border border-border-soft bg-surface-soft">
+      <div className="h-full rounded-[20px] bg-gradient-to-br from-white via-slate-100 to-white" />
     </div>
   );
 }

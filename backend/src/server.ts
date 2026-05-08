@@ -20,6 +20,7 @@ import dmtRoutes from './modules/dmt/dmt.routes';
 import kycRoutes from './modules/kyc/kyc.routes';
 import rechargeRoutes from './modules/recharge/recharge.routes';
 import kwikapiWebhookRoutes from './modules/webhook/kwikapi-webhook.routes';
+import adminDashboardRoutes from './modules/admin/admin-dashboard.routes';
 import runtimeConfigRoutes from './modules/admin/runtime-config.routes';
 import { runtimeConfig } from './modules/admin/runtime-config.service';
 
@@ -73,6 +74,7 @@ async function bootstrap() {
   app.use('/api/v1', catalogRoutes);
   app.use('/api/v1', kycRoutes);
   app.use('/api/v1', dmtRoutes);
+  app.use('/api/v1', adminDashboardRoutes);
   app.use('/api/v1', runtimeConfigRoutes);
   app.use('/api/v1/recharge', rechargeRoutes);
   app.use('/api/v1/webhooks', kwikapiWebhookRoutes);

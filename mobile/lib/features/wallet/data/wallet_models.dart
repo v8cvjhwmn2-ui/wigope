@@ -76,7 +76,7 @@ class AddMoneyOrder {
         amount: (json['amount'] as num?) ?? 0,
         amountPaise: (json['amountPaise'] as num?)?.toInt() ?? 0,
         currency: (json['currency'] as String?) ?? 'INR',
-        keyId: (json['keyId'] as String?) ?? 'rzp_test_mock',
-        provider: (json['provider'] as String?) ?? 'mock',
+        keyId: (json['keyId'] as String?) ?? '',
+        provider: (json['provider'] as String?) ?? 'razorpay',
       );
 }

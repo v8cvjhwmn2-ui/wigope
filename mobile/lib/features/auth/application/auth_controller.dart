@@ -15,12 +15,8 @@ import 'auth_state.dart';
 
 const _defaultBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  // Browser local preview. Android emulator / physical device should override
-  // with `--dart-define=API_BASE_URL=http://10.0.2.2:4000/api/v1` or prod URL.
-  defaultValue: 'http://localhost:4000/api/v1',
+  defaultValue: 'https://recharge-api.wigope.com/api/v1',
 );
-
-const _devMockAuth = bool.fromEnvironment('WIGOPE_MOCK_AUTH');
 
 final tokenStorageProvider = Provider<TokenStorage>((_) => TokenStorage());
 
@@ -52,9 +48,6 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController(this._repo, this._tokens, this._dio)
       : super(const AuthInitializing()) {
     _dio.onAuthFailure = () async {
-      if (_canUseMockAuth && state is AuthSignedIn) {
-        return;
-      }
       // Refresh interceptor failed — fall back to signed-out so the router
       // redirects to /login and any in-flight UI clears.
       state = const AuthSignedOut(reason: 'Session expired');
@@ -127,20 +120,6 @@ class AuthController extends StateNotifier<AuthState> {
       );
       return r;
     } catch (e) {
-      if (_canUseMockAuth) {
-        final r = SendOtpResult(
-          sentTo: _mask(mobile),
-          expiresInSeconds: 300,
-          retryAfterSeconds: 0,
-        );
-        state = AuthAwaitingOtp(
-          mobile: mobile,
-          maskedMobile: r.sentTo,
-          expiresInSeconds: r.expiresInSeconds,
-          cooldownSeconds: r.retryAfterSeconds,
-        );
-        return r;
-      }
       state = const AuthSignedOut();
       rethrow;
     }
@@ -151,17 +130,6 @@ class AuthController extends StateNotifier<AuthState> {
     required String otp,
   }) async {
     state = AuthVerifying(mobile);
-    if (_canUseMockAuth && otp == '123456') {
-      await _clearTokensBestEffort();
-      final r = _mockVerifyResult(mobile);
-      await _tokens.save(
-        accessToken: r.accessToken,
-        refreshToken: r.refreshToken,
-        refreshExpiresAt: DateTime.now().toUtc().add(const Duration(days: 30)),
-      );
-      state = AuthSignedIn(r.user);
-      return r;
-    }
     try {
       final r = await _repo.verifyOtp(
         mobile: mobile,
@@ -204,25 +172,5 @@ class AuthController extends StateNotifier<AuthState> {
     if (digits.length < 4) return '+91 $digits';
     final last4 = digits.substring(digits.length - 4);
     return '+91 ${digits.substring(0, 2)}****$last4';
-  }
-
-  bool get _canUseMockAuth => _devMockAuth;
-
-  VerifyOtpResult _mockVerifyResult(String mobile) {
-    final digits = mobile.replaceAll(RegExp(r'\D'), '');
-    final normalized = digits.length == 10 ? '+91$digits' : mobile;
-    return VerifyOtpResult(
-      user: AuthUser(
-        id: 'demo-user',
-        mobile: normalized,
-        name: 'Keshav',
-        kycStatus: 'none',
-        walletBalance: 0,
-        role: 'user',
-      ),
-      accessToken: 'debug-access-token',
-      refreshToken: 'debug-refresh-token',
-      isNewUser: false,
-    );
   }
 }

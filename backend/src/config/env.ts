@@ -4,7 +4,7 @@ import { z } from 'zod';
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(4000),
-  APP_BASE_URL: z.string().url().default('http://localhost:4000'),
+  APP_BASE_URL: z.string().url().default('https://recharge-api.wigope.com'),
   CORS_ORIGINS: z.string().optional(),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
   ADMIN_PANEL_SECRET: z.string().default(''),
@@ -30,7 +30,7 @@ const schema = z.object({
   OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().default(30),
   OTP_SEND_RATE_LIMIT_PER_HOUR_IP: z.coerce.number().default(10),
 
-  SMS_PROVIDER: z.enum(['mock', 'inboxraja', 'msg91', 'twilio']).default('mock'),
+  SMS_PROVIDER: z.enum(['inboxraja', 'msg91', 'twilio']).default('inboxraja'),
   INBOXRAJA_URL: z.string().optional(),
   INBOXRAJA_API_KEY: z.string().default(''),
   INBOXRAJA_SENDER_ID: z.string().default('WIGOPE'),

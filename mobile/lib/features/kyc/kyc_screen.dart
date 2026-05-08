@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -18,7 +17,7 @@ class KycScreen extends ConsumerStatefulWidget {
 class _KycScreenState extends ConsumerState<KycScreen> {
   final _pan = TextEditingController();
   final _aadhaar = TextEditingController();
-  final _name = TextEditingController(text: 'Keshav Swami');
+  final _name = TextEditingController();
   final _address = TextEditingController();
   bool _loading = false;
   String? _message;
@@ -57,18 +56,6 @@ class _KycScreenState extends ConsumerState<KycScreen> {
     }
   }
 
-  void _mockOcr() {
-    HapticFeedback.selectionClick();
-    setState(() {
-      _pan.text = 'ABCDE1234F';
-      _aadhaar.text = '1234';
-      _name.text = 'Keshav Swami';
-      _address.text = 'Noida, Uttar Pradesh';
-      _message =
-          'OCR preview filled. Native ML Kit hook will replace this on Android build.';
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(kycStatusProvider);
@@ -88,14 +75,8 @@ class _KycScreenState extends ConsumerState<KycScreen> {
                     style: WigopeText.h2.copyWith(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 6),
                 Text(
-                  'Use OCR scan on Android, or enter details manually for web preview.',
+                  'Enter your PAN and Aadhaar details securely. OCR scan will be enabled from the Android ML Kit module.',
                   style: WigopeText.bodyS,
-                ),
-                const SizedBox(height: 14),
-                OutlinedButton.icon(
-                  onPressed: _mockOcr,
-                  icon: const Icon(PhosphorIconsRegular.scan),
-                  label: const Text('Scan Aadhaar/PAN with OCR'),
                 ),
                 const SizedBox(height: 14),
                 _Field(

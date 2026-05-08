@@ -151,8 +151,8 @@ export const runtimeConfig = {
 function normalizeValue(key: RuntimeConfigKey, value: string) {
   if (key === 'INBOXRAJA_BASE_URL') return value.replace(/\/bulkV2\/?$/i, '').replace(/\/$/, '');
   if (key === 'KWIKAPI_BASE_URL') return value.replace(/\/$/, '');
-  if (key === 'SMS_PROVIDER' && !['inboxraja', 'mock', 'msg91', 'twilio'].includes(value)) {
-    throw Err.validation('SMS_PROVIDER must be inboxraja, msg91, twilio, or mock');
+  if (key === 'SMS_PROVIDER' && !['inboxraja', 'msg91', 'twilio'].includes(value)) {
+    throw Err.validation('SMS_PROVIDER must be inboxraja, msg91, or twilio');
   }
   if (key === 'KWIKAPI_ENVIRONMENT' && !['uat', 'production'].includes(value)) {
     throw Err.validation('KWIKAPI_ENVIRONMENT must be uat or production');

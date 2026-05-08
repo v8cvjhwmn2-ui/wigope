@@ -34,6 +34,7 @@ class _HubbleWebViewScreenState extends State<HubbleWebViewScreen> {
   bool _hardError = false;
   String? _errorMessage;
   int _progress = 0;
+  bool _started = false;
 
   @override
   void initState() {
@@ -73,17 +74,42 @@ class _HubbleWebViewScreenState extends State<HubbleWebViewScreen> {
           if (req.url.startsWith('http')) return NavigationDecision.navigate;
           return NavigationDecision.prevent;
         },
-      ))
-      ..loadRequest(_target());
+      ));
   }
 
-  Uri _target() {
-    final base = HubbleSdkConfig.sdkUri();
-    if (widget.deepLinkPath == null || widget.deepLinkPath!.isEmpty)
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _loadTarget();
+  }
+
+  Future<void> _loadTarget() async {
+    try {
+      final token = await HubbleSdkConfig.issueSsoToken(context);
+      final uri = _target(token);
+      await _controller.loadRequest(uri);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _hardError = true;
+        _errorMessage = 'Could not start your Hubble Rewards session.';
+      });
+    }
+  }
+
+  Uri _target(String token) {
+    final base = HubbleSdkConfig.sdkUri(token: token);
+    if (widget.deepLinkPath == null || widget.deepLinkPath!.isEmpty) {
       return base;
+    }
     // Hubble deep links use a path *before* the query string. Rebuild the URI
     // so the existing query params are preserved.
-    return HubbleSdkConfig.sdkUri(deepLinkPath: widget.deepLinkPath!);
+    return HubbleSdkConfig.sdkUri(
+      token: token,
+      deepLinkPath: widget.deepLinkPath!,
+    );
   }
 
   void _onSdkMessage(JavaScriptMessage msg) {

@@ -1,11 +1,6 @@
 import type { RequestHandler } from 'express';
-import { z } from 'zod';
 
 import { transactionService } from './transaction.service';
-
-const mockBody = z.object({
-  kind: z.enum(['success', 'failure', 'cashback']),
-});
 
 export const transactionController = {
   list: (async (req, res, next) => {
@@ -42,13 +37,4 @@ export const transactionController = {
     }
   }) as RequestHandler,
 
-  mockEvent: (async (req, res, next) => {
-    try {
-      const { kind } = mockBody.parse(req.body);
-      const transaction = await transactionService.createMockEvent(req.auth!.sub, kind);
-      res.json({ ok: true, success: true, data: { transaction } });
-    } catch (e) {
-      next(e);
-    }
-  }) as RequestHandler,
 };

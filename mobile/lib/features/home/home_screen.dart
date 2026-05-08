@@ -666,9 +666,7 @@ Future<void> showAddMoneySheet(BuildContext context) async {
         behavior: SnackBarBehavior.floating,
         backgroundColor: WigopeColors.navy900,
         content: Text(
-          order.provider == 'razorpay'
-              ? 'Razorpay order ready: ${order.orderId}'
-              : 'Mock Razorpay order ready: ${order.orderId}',
+          '${order.provider.toUpperCase()} order ready: ${order.orderId}',
           style: WigopeText.bodyS.copyWith(color: Colors.white),
         ),
       ),

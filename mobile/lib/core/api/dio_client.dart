@@ -1,12 +1,9 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../error/app_exception.dart';
 import '../storage/token_storage.dart';
-
-const _devMockAuth = bool.fromEnvironment('WIGOPE_MOCK_AUTH');
 
 /// Single Dio instance — never new-up Dio anywhere else.
 ///
@@ -58,8 +55,6 @@ class DioClient {
       final access = await _tokens.getAccessToken();
       if (access != null) {
         options.headers['Authorization'] = 'Bearer $access';
-      } else if (_devMockAuth) {
-        options.headers['Authorization'] = 'Bearer debug-access-token';
       }
     }
     handler.next(options);

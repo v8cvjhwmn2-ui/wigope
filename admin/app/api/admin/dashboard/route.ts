@@ -4,20 +4,14 @@ import { readAdminSession } from '@/lib/admin-auth';
 const backendBase = process.env.BACKEND_API_BASE_URL ?? 'https://recharge-api.wigope.com/api/v1';
 const adminSecret = process.env.ADMIN_PANEL_SECRET ?? '';
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   if (!readAdminSession(req)) {
     return NextResponse.json({ ok: false, error: { message: 'Unauthenticated' } }, { status: 401 });
   }
-  const body = await req.text();
   try {
-    const res = await fetch(`${backendBase}/admin/runtime-config/test-sms`, {
-      method: 'POST',
+    const res = await fetch(`${backendBase}/admin/dashboard`, {
       cache: 'no-store',
-      headers: {
-        'content-type': 'application/json',
-        ...(adminSecret ? { 'x-admin-secret': adminSecret } : {}),
-      },
-      body,
+      headers: adminSecret ? { 'x-admin-secret': adminSecret } : {},
     });
     const text = await res.text();
     return new NextResponse(text || '{}', {
@@ -25,6 +19,9 @@ export async function POST(req: NextRequest) {
       headers: { 'content-type': res.headers.get('content-type') ?? 'application/json' },
     });
   } catch {
-    return NextResponse.json({ ok: false, error: { message: 'Recharge API is not reachable' } }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, error: { message: 'Recharge API is not reachable' } },
+      { status: 502 },
+    );
   }
 }

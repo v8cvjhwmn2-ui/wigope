@@ -60,11 +60,10 @@ export class KwikApiProvider implements RechargeProvider {
     try {
       const data = await this.get('/api/v2/operator_list.php', { service: serviceFilter });
       const rows = pickArray(data, ['data', 'operators', 'details', 'records']);
-      const mapped = rows.map((row, i) => mapOperator(asMap(row), serviceFilter, i));
-      return mapped.length ? mapped : mockOperators(serviceFilter);
+      return rows.map((row, i) => mapOperator(asMap(row), serviceFilter, i));
     } catch (error) {
-      this.logProviderError('operator list failed, using local UAT catalog', error);
-      return mockOperators(serviceFilter);
+      this.logProviderError('operator list failed', error);
+      throw new RechargeProviderError('NETWORK', 'Operator list fetch failed', toErrorPayload(error));
     }
   }
 
@@ -85,10 +84,10 @@ export class KwikApiProvider implements RechargeProvider {
           circleName: String(r.circle_name ?? r.name ?? ''),
         };
       }).filter((row) => row.circleCode && row.circleName);
-      return mapped.length ? mapped : mockCircles();
+      return mapped;
     } catch (error) {
-      this.logProviderError('circle list failed, using local UAT catalog', error);
-      return mockCircles();
+      this.logProviderError('circle list failed', error);
+      throw new RechargeProviderError('NETWORK', 'Circle list fetch failed', toErrorPayload(error));
     }
   }
 
@@ -104,9 +103,8 @@ export class KwikApiProvider implements RechargeProvider {
         circleName: String(details.circle_name ?? details.circleName ?? 'Delhi NCR'),
       };
     } catch (error) {
-      this.logProviderError('operator detect failed, using deterministic fallback', error);
-      const fallback = cleanMobile.startsWith('9') ? 'Jio' : cleanMobile.startsWith('8') ? 'Airtel' : 'Vi';
-      return { opid: fallback === 'Jio' ? '11' : fallback === 'Airtel' ? '1' : '4', operatorName: fallback, circleCode: '5', circleName: 'Delhi NCR' };
+      this.logProviderError('operator detect failed', error);
+      throw new RechargeProviderError('NETWORK', 'Operator detection failed', toErrorPayload(error));
     }
   }
 
@@ -114,11 +112,10 @@ export class KwikApiProvider implements RechargeProvider {
     try {
       const data = await this.get('/api/v2/plans.php', { opid, circle_code: circleCode });
       const rows = pickArray(data, ['data', 'plans', 'details', 'records']);
-      const mapped = rows.map((row, i) => mapPlan(asMap(row), i));
-      return mapped.length ? mapped : mockMobilePlans();
+      return rows.map((row, i) => mapPlan(asMap(row), i));
     } catch (error) {
-      this.logProviderError('mobile plans failed, using local UAT plans', error);
-      return mockMobilePlans();
+      this.logProviderError('mobile plans failed', error);
+      throw new RechargeProviderError('NETWORK', 'Mobile plans fetch failed', toErrorPayload(error));
     }
   }
 
@@ -126,11 +123,10 @@ export class KwikApiProvider implements RechargeProvider {
     try {
       const data = await this.get('/api/v2/dth_plans.php', { opid });
       const rows = pickArray(data, ['data', 'plans', 'details', 'records']);
-      const mapped = rows.map((row, i) => mapPlan(asMap(row), i));
-      return mapped.length ? mapped : mockDthPlans();
+      return rows.map((row, i) => mapPlan(asMap(row), i));
     } catch (error) {
-      this.logProviderError('dth plans failed, using local UAT plans', error);
-      return mockDthPlans();
+      this.logProviderError('dth plans failed', error);
+      throw new RechargeProviderError('NETWORK', 'DTH plans fetch failed', toErrorPayload(error));
     }
   }
 
@@ -335,43 +331,6 @@ function mapPlan(row: JsonMap, index: number): MobilePlan {
     description: String(row.description ?? row.desc ?? row.detail ?? row.plan_name ?? 'Recharge plan'),
     category: String(row.category ?? row.type ?? 'Popular'),
   };
-}
-
-function mockOperators(serviceFilter?: string): Operator[] {
-  const rows: Operator[] = [
-    { opid: '11', operatorName: 'Jio', serviceType: 'Prepaid', status: 'active', amountMinimum: 10, amountMaximum: 10000 },
-    { opid: '1', operatorName: 'Airtel', serviceType: 'Prepaid', status: 'active', amountMinimum: 10, amountMaximum: 10000 },
-    { opid: '4', operatorName: 'Vi', serviceType: 'Prepaid', status: 'active', amountMinimum: 10, amountMaximum: 10000 },
-    { opid: '6', operatorName: 'BSNL', serviceType: 'Prepaid', status: 'active', amountMinimum: 10, amountMaximum: 10000 },
-    { opid: '101', operatorName: 'Tata Play', serviceType: 'DTH', status: 'active', amountMinimum: 50, amountMaximum: 5000 },
-    { opid: '201', operatorName: 'BSES Rajdhani', serviceType: 'Electricity', status: 'active', billFetchSupported: true, bbpsEnabled: true },
-  ];
-  return serviceFilter ? rows.filter((row) => row.serviceType.toLowerCase() === serviceFilter.toLowerCase()) : rows;
-}
-
-function mockCircles(): Circle[] {
-  return [
-    { circleCode: '5', circleName: 'Delhi NCR' },
-    { circleCode: '6', circleName: 'Mumbai' },
-    { circleCode: '7', circleName: 'Uttar Pradesh East' },
-    { circleCode: '8', circleName: 'Uttar Pradesh West' },
-  ];
-}
-
-function mockMobilePlans(): MobilePlan[] {
-  return [
-    { id: 'uat_199', amount: 199, validity: '28 days', description: '1.5GB/day, unlimited calls, 100 SMS/day', category: 'Popular' },
-    { id: 'uat_239', amount: 239, validity: '28 days', description: '2GB/day, unlimited calls, 100 SMS/day', category: 'Unlimited' },
-    { id: 'uat_299', amount: 299, validity: '28 days', description: '2.5GB/day, unlimited calls, OTT benefits', category: 'Popular' },
-    { id: 'uat_666', amount: 666, validity: '84 days', description: '1.5GB/day, unlimited calls, long validity', category: 'Value' },
-  ];
-}
-
-function mockDthPlans(): DthPlan[] {
-  return [
-    { id: 'dth_200', amount: 200, validity: '30 days', description: 'Basic entertainment pack', category: 'Popular' },
-    { id: 'dth_500', amount: 500, validity: '30 days', description: 'Family HD pack', category: 'Popular' },
-  ];
 }
 
 function pickArray(data: JsonMap, keys: string[]): unknown[] {

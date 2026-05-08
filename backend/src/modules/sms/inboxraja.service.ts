@@ -85,16 +85,6 @@ class InboxRajaProvider implements SmsProvider {
   }
 }
 
-class MockProvider implements SmsProvider {
-  async sendOtp({ mobile, otp }: { mobile: string; otp: string }) {
-    logger.warn(
-      { mobile: maskMobile(mobile), otpLength: otp.length },
-      `[MOCK SMS] OTP generated for ${maskMobile(mobile)}`,
-    );
-    return { providerMessageId: `mock_${Date.now()}` };
-  }
-}
-
 function maskMobile(m: string): string {
   return m.length === 10 ? `${m.slice(0, 2)}******${m.slice(-2)}` : '***';
 }
@@ -139,7 +129,6 @@ function maskProviderBase(baseURL: string): string {
 export const sms: SmsProvider =
   new (class DynamicSmsProvider implements SmsProvider {
     private readonly inbox = new InboxRajaProvider();
-    private readonly mock = new MockProvider();
 
     async sendOtp(input: { mobile: string; otp: string }) {
       const provider = runtimeConfig.get('SMS_PROVIDER') || env.SMS_PROVIDER;
@@ -147,9 +136,6 @@ export const sms: SmsProvider =
       if (provider === 'inboxraja' && apiKey) {
         return this.inbox.sendOtp(input);
       }
-      if (env.NODE_ENV === 'production') {
-        throw Err.smsFailed();
-      }
-      return this.mock.sendOtp(input);
+      throw Err.smsFailed();
     }
   })();
