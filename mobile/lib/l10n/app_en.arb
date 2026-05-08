@@ -1,0 +1,27 @@
+{
+  "loginTitle": "Enter your number",
+  "loginSubtitle": "Securely sign in to Wigope Pay",
+  "loginCta": "Send OTP",
+  "otpTitle": "Enter OTP",
+  "otpSentTo": "OTP sent to {mobile}",
+  "@otpSentTo": {
+    "placeholders": {
+      "mobile": {}
+    }
+  },
+  "resendIn": "Resend OTP in {seconds}",
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
+  "resend": "Resend OTP",
+  "verifyCta": "Verify & Continue",
+  "tagline": "simple. secure. recharge-first.",
+  "errorOtpExpired": "OTP has expired. Please request a new one.",
+  "errorOtpWrong": "Incorrect OTP. Please try again.",
+  "errorOtpLocked": "Too many wrong attempts. Please request a new OTP.",
+  "errorRateLimited": "Too many OTP requests. Please try again later.",
+  "errorNetwork": "We couldn't reach Wigope servers. Check your connection.",
+  "errorGeneric": "Something went wrong. Please try again."
+}

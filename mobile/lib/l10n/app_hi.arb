@@ -1,0 +1,27 @@
+{
+  "loginTitle": "Apna number daaliye",
+  "loginSubtitle": "Wigope Pay mein securely sign in karein",
+  "loginCta": "OTP bhejein",
+  "otpTitle": "OTP daaliye",
+  "otpSentTo": "OTP {mobile} par bhej diya hai",
+  "@otpSentTo": {
+    "placeholders": {
+      "mobile": {}
+    }
+  },
+  "resendIn": "OTP {seconds} sec mein dobara bhejein",
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
+  "resend": "OTP dobara bhejein",
+  "verifyCta": "Verify karein",
+  "tagline": "simple. secure. recharge-first.",
+  "errorOtpExpired": "OTP ki samay seema khatam. Naya OTP request karein.",
+  "errorOtpWrong": "OTP galat hai. Dobara try karein.",
+  "errorOtpLocked": "Bahut zyada galat attempts. Naya OTP request karein.",
+  "errorRateLimited": "Bahut zyada OTP requests. Thoda wait karein.",
+  "errorNetwork": "Wigope server se connect nahi ho pa raha. Internet check karein.",
+  "errorGeneric": "Kuch galat ho gaya. Dobara try karein."
+}

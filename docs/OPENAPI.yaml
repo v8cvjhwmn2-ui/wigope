@@ -1,0 +1,342 @@
+openapi: 3.0.3
+info:
+  title: Wigope Pay API
+  version: 1.0.0
+  description: Production API contract for Wigope Pay consumer app, provider integrations, admin operations, and webhooks.
+servers:
+  - url: https://api.wigope.com/api/v1
+    description: Production
+  - url: http://127.0.0.1:4000/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+  /auth/send-otp:
+    post:
+      summary: Send OTP to a mobile number
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendOtpRequest'
+      responses:
+        '200':
+          description: OTP dispatch accepted
+        '429':
+          $ref: '#/components/responses/Error'
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP and create session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtpRequest'
+      responses:
+        '200':
+          description: Access and refresh tokens
+        '401':
+          $ref: '#/components/responses/Error'
+  /auth/refresh:
+    post:
+      summary: Rotate refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New token pair
+        '401':
+          $ref: '#/components/responses/Error'
+  /auth/logout:
+    post:
+      summary: Revoke current refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '204':
+          description: Logged out
+  /auth/me:
+    get:
+      summary: Current authenticated user
+      responses:
+        '200':
+          description: User profile
+  /profile:
+    get:
+      summary: Profile and wallet summary
+      responses:
+        '200':
+          description: Profile loaded
+  /wallet:
+    get:
+      summary: Wallet balance
+      responses:
+        '200':
+          description: Balance loaded
+  /wallet/ledger:
+    get:
+      summary: Wallet ledger
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        '200':
+          description: Ledger entries
+  /wallet/add-money/order:
+    post:
+      summary: Create Razorpay wallet top-up order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  minimum: 10
+                  maximum: 100000
+      responses:
+        '200':
+          description: Razorpay order metadata
+  /catalog/services:
+    get:
+      summary: Service catalog
+      responses:
+        '200':
+          description: Service tiles
+  /catalog/operators:
+    get:
+      summary: Operators by service
+      parameters:
+        - in: query
+          name: service
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operator list
+  /recharge/detect-operator:
+    get:
+      summary: Detect mobile operator
+      parameters:
+        - in: query
+          name: number
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operator detection result
+  /recharge/mobile:
+    post:
+      summary: Initiate prepaid recharge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, amount]
+              properties:
+                number:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Recharge status
+  /recharge/transactions:
+    get:
+      summary: Recharge transaction history
+      responses:
+        '200':
+          description: Recharge transactions
+  /transactions:
+    get:
+      summary: All transaction history
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transactions
+  /transactions/{id}:
+    get:
+      summary: Transaction detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction detail
+  /transactions/{id}/receipt.pdf:
+    get:
+      summary: Receipt PDF
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PDF receipt
+  /notifications:
+    get:
+      summary: Notification center
+      responses:
+        '200':
+          description: Notifications
+  /rewards/sso-token:
+    post:
+      summary: Mint Hubble SDK SSO token
+      responses:
+        '200':
+          description: Hubble SSO token
+  /hubble/sso:
+    post:
+      summary: Hubble SSO callback
+      security:
+        - hubbleSecret: []
+      responses:
+        '200':
+          description: Hubble user identity
+  /hubble/balance:
+    get:
+      summary: Hubble coin balance
+      security:
+        - hubbleSecret: []
+      responses:
+        '200':
+          description: Coin balance
+  /hubble/debit:
+    post:
+      summary: Hubble coin debit
+      security:
+        - hubbleSecret: []
+      responses:
+        '200':
+          description: Debit result
+  /hubble/reverse:
+    post:
+      summary: Hubble coin reversal
+      security:
+        - hubbleSecret: []
+      responses:
+        '200':
+          description: Reversal result
+  /webhooks/kwikapi:
+    post:
+      summary: KwikAPI transaction webhook
+      security:
+        - kwikapiSignature: []
+      responses:
+        '200':
+          description: Webhook accepted
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    hubbleSecret:
+      type: apiKey
+      in: header
+      name: X-Hubble-Secret
+    kwikapiSignature:
+      type: apiKey
+      in: header
+      name: x-kwikapi-signature
+  schemas:
+    SendOtpRequest:
+      type: object
+      required: [mobile]
+      properties:
+        mobile:
+          type: string
+          example: '+919568654684'
+    VerifyOtpRequest:
+      type: object
+      required: [mobile, otp]
+      properties:
+        mobile:
+          type: string
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+        deviceInfo:
+          type: object
+          properties:
+            platform:
+              type: string
+            model:
+              type: string
+            osVersion:
+              type: string
+            appVersion:
+              type: string
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            messageHi:
+              type: string
+            details:
+              nullable: true
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
