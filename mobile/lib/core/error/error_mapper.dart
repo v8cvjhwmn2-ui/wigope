@@ -1,4 +1,5 @@
 import 'app_exception.dart';
+import 'package:dio/dio.dart';
 
 /// Backend error code → user-facing copy. Keep in sync with
 /// `backend/src/utils/errors.ts`.
@@ -8,6 +9,9 @@ import 'app_exception.dart';
 /// or where we want to inject dynamic numbers (attempts, seconds).
 class ErrorMapper {
   static String toUserMessage(Object error) {
+    if (error is DioException && error.error is AppException) {
+      error = error.error! as AppException;
+    }
     if (error is! AppException) {
       return "Something went wrong. Please try again.";
     }

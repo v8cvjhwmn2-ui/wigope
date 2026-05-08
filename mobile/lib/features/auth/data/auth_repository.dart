@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/api/dio_client.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../core/storage/token_storage.dart';
 import 'auth_models.dart';
 
@@ -16,7 +17,7 @@ class AuthRepository {
       data: {'mobile': mobile},
       options: Options(extra: {'skipAuth': true}),
     );
-    return SendOtpResult.fromJson(res.data['data'] as Map<String, dynamic>);
+    return SendOtpResult.fromJson(unwrapApiData(res.data));
   }
 
   Future<VerifyOtpResult> verifyOtp({
@@ -33,8 +34,7 @@ class AuthRepository {
       },
       options: Options(extra: {'skipAuth': true}),
     );
-    final result =
-        VerifyOtpResult.fromJson(res.data['data'] as Map<String, dynamic>);
+    final result = VerifyOtpResult.fromJson(unwrapApiData(res.data));
     await _tokens.save(
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
@@ -47,10 +47,11 @@ class AuthRepository {
   Future<AuthUser?> me() async {
     try {
       final res = await _client.raw.get('/auth/me');
-      return AuthUser.fromJson(
-        (res.data['data']['user']) as Map<String, dynamic>,
-      );
+      final data = unwrapApiData(res.data);
+      return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException {
+      return null;
+    } on AppException {
       return null;
     }
   }

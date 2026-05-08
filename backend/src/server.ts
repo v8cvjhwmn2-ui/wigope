@@ -44,9 +44,11 @@ async function bootstrap() {
       origin(origin, callback) {
         if (!origin) return callback(null, true);
         if (corsOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error('CORS origin not allowed'));
+        logger.warn({ origin }, 'cors origin blocked');
+        return callback(null, false);
       },
       credentials: true,
+      optionsSuccessStatus: 204,
     }),
   );
   app.use(express.json({ limit: '1mb', verify: rawBodySaver }));
