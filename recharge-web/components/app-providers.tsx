@@ -51,9 +51,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    const isPublic = pathname === '/login';
+    const isPublic = pathname === '/' || pathname === '/login';
     if (!user && !isPublic) router.replace('/login');
-    if (user && isPublic) router.replace('/dashboard');
+    if (user && pathname === '/login') router.replace('/dashboard');
   }, [loading, pathname, router, user]);
 
   const signOut = useCallback(async () => {

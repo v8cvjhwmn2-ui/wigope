@@ -45,3 +45,5 @@ mobile/.idea/
 # Misc
 *.tmp
 *.swp
+.vercel
+.env*.local
