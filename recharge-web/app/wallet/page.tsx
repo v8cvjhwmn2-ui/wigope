@@ -1,7 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { Gift, Plus, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, Gift, Plus, ShieldCheck, WalletCards } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,19 +55,27 @@ export default function WalletPage() {
     <AppShell title="Wallet">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <div className="space-y-5">
-        <Card className="bg-gradient-to-br from-orange-50 to-white">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-wigope-orange">Wallet Topup</p>
-          <h2 className="mt-2 text-2xl font-black">Enter amount</h2>
-          <div className="mt-4 rounded-3xl bg-white p-3 shadow-inner">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-slate-950 to-slate-800 text-white">
+          <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-wigope-orange/50 blur-3xl" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
+              <WalletCards className="h-6 w-6 text-orange-200" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-200">Wallet Topup</p>
+              <h2 className="text-2xl font-black tracking-[-0.05em]">Enter amount</h2>
+            </div>
+          </div>
+          <div className="relative mt-5 rounded-[28px] border border-white/15 bg-white p-3 shadow-2xl shadow-slate-950/20">
             <Input
               inputMode="numeric"
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value.replace(/\D/g, '')))}
-              className="h-20 border-0 text-5xl font-black shadow-none focus:ring-0"
+              className="h-20 border-0 bg-transparent text-6xl font-black tracking-[-0.08em] text-slate-950 shadow-none focus:ring-0"
             />
           </div>
-          <div className="mt-4 flex items-center gap-2 text-sm font-bold text-slate-600">
-            <ShieldCheck className="h-5 w-5 text-emerald-500" />
+          <div className="relative mt-4 flex items-center gap-2 text-sm font-bold text-white/75">
+            <ShieldCheck className="h-5 w-5 text-emerald-300" />
             Secure wallet payment
           </div>
         </Card>
@@ -77,8 +85,8 @@ export default function WalletPage() {
             <button
               key={value}
               onClick={() => setAmount(value)}
-              className={`h-12 min-w-24 rounded-full border-2 px-5 text-lg font-black ${
-                amount === value ? 'border-wigope-orange bg-wigope-orange text-white' : 'border-blue-500 bg-white text-blue-600'
+              className={`h-11 min-w-24 rounded-full border px-5 text-base font-black shadow-sm ${
+                amount === value ? 'border-wigope-orange bg-wigope-orange text-white' : 'border-wigope-line bg-white text-slate-950'
               }`}
             >
               ₹{value}
@@ -86,10 +94,11 @@ export default function WalletPage() {
           ))}
         </div>
 
-        <Card className="bg-gradient-to-r from-wigope-orange to-blue-700 text-white">
-          <h2 className="text-3xl font-black">Add More & Earn More</h2>
-          <p className="mt-2 text-lg font-semibold text-white/85">Offer applied on eligible wallet topups.</p>
-          <button className="mt-5 rounded-full bg-white px-6 py-3 font-black text-navy-900" onClick={() => setAmount(2000)}>
+        <Card className="relative overflow-hidden bg-gradient-to-r from-wigope-orange to-slate-950 text-white">
+          <div className="absolute right-0 top-0 h-full w-32 rounded-l-full bg-white/10" />
+          <h2 className="relative text-3xl font-black tracking-[-0.06em]">Add More & Earn More</h2>
+          <p className="relative mt-2 text-base font-semibold leading-7 text-white/85">Offer applied on eligible wallet topups with Razorpay-secured checkout.</p>
+          <button className="relative mt-5 rounded-full bg-white px-6 py-3 font-black text-navy-900" onClick={() => setAmount(2000)}>
             Add ₹2000
           </button>
         </Card>
@@ -102,7 +111,10 @@ export default function WalletPage() {
         </Button>
 
         <Card>
-          <h2 className="text-xl font-black">Wallet history</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black">Wallet history</h2>
+            <BadgeCheck className="h-5 w-5 text-emerald-500" />
+          </div>
           {ledger.loading ? (
             <div className="mt-4 space-y-3">
               <Skeleton className="h-16" />

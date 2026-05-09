@@ -9,10 +9,11 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://recharge.wigope.com'),
   title: {
-    default: 'Wigope Recharge',
+    default: 'Wigope Recharge | Mobile Recharge, Bills & Gift Cards',
     template: '%s | Wigope Recharge'
   },
-  description: 'Mobile recharge, bill payments, wallet, rewards, and transactions by Wigope.',
+  description:
+    'Official Wigope Recharge product website for mobile recharge, DTH, FASTag, bills, wallet topups, gift cards, OTT vouchers, rewards, support and customer policies.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -20,8 +21,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default'
   },
   openGraph: {
-    title: 'Wigope Recharge',
-    description: 'Recharge, bill payments, wallet, and rewards in one premium Wigope app.',
+    title: 'Wigope Recharge | Mobile Recharge, Bills & Gift Cards',
+    description:
+      'Explore Wigope Recharge services, Hubble-powered rewards, app download, support and customer policies.',
     url: 'https://recharge.wigope.com',
     siteName: 'Wigope Recharge',
     type: 'website'

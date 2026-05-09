@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, CalendarDays, RefreshCw, SlidersHorizontal, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarDays, Download, RefreshCw, SlidersHorizontal, Zap } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,8 @@ const tabs = [
 export default function TransactionsPage() {
   const [status, setStatus] = useState('all');
   const txns = useAsync(() => transactionService.list(status), [status]);
+  const rows = useMemo(() => txns.data?.transactions ?? [], [txns.data]);
   const totals = useMemo(() => {
-    const rows = txns.data?.transactions ?? [];
     return rows.reduce(
       (acc, item) => {
         if (item.status === 'success') acc.spent += Number(item.amount ?? 0);
@@ -30,7 +30,7 @@ export default function TransactionsPage() {
       },
       { spent: 0 }
     );
-  }, [txns.data]);
+  }, [rows]);
 
   return (
     <AppShell title="Transactions">
@@ -41,9 +41,9 @@ export default function TransactionsPage() {
               <button
                 key={tab.value}
                 onClick={() => setStatus(tab.value)}
-                className={`h-11 rounded-2xl border text-sm font-black ${
+                className={`h-12 rounded-2xl border text-sm font-black transition ${
                   status === tab.value
-                    ? 'border-wigope-orange bg-wigope-orange text-white'
+                    ? 'border-wigope-orange bg-wigope-orange text-white shadow-lg shadow-orange-500/20'
                     : 'border-wigope-line bg-white text-navy-900'
                 }`}
               >
@@ -51,41 +51,25 @@ export default function TransactionsPage() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2 text-xs font-black">
-            <button className="rounded-2xl border border-wigope-line py-2 text-blue-600">
-              <RefreshCw className="mx-auto mb-1 h-4 w-4" />
+          <div className="grid grid-cols-3 gap-2 text-sm font-black">
+            <button className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-wigope-line bg-white text-blue-600">
+              <RefreshCw className="h-4 w-4" />
               Recent
             </button>
-            <button className="rounded-2xl border border-wigope-line py-2">
-              <CalendarDays className="mx-auto mb-1 h-4 w-4" />
+            <button className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-wigope-line bg-white">
+              <CalendarDays className="h-4 w-4" />
               Today
             </button>
-            <button className="rounded-2xl border border-wigope-line py-2">
-              <SlidersHorizontal className="mx-auto mb-1 h-4 w-4" />
+            <button className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-wigope-line bg-white">
+              <SlidersHorizontal className="h-4 w-4" />
               Filter
             </button>
           </div>
         </Card>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-3 rounded-3xl bg-blue-50 p-4">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-wigope-orange text-white">
-              <ArrowUp className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-bold text-slate-500">Total spent</p>
-              <p className="text-lg font-black">₹{totals.spent}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 rounded-3xl bg-emerald-50 p-4">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-white">
-              <ArrowDown className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-xs font-bold text-slate-500">Cashback</p>
-              <p className="text-lg font-black">₹0</p>
-            </div>
-          </div>
+          <Metric icon={<ArrowUp />} label="Total spent" value={`₹${totals.spent}`} tone="orange" />
+          <Metric icon={<ArrowDown />} label="Cashback" value="₹0" tone="green" />
         </div>
 
         {txns.loading ? (
@@ -96,35 +80,60 @@ export default function TransactionsPage() {
           </div>
         ) : txns.error ? (
           <ErrorState message={txns.error} onRetry={txns.reload} />
-        ) : txns.data?.transactions.length ? (
+        ) : rows.length ? (
           <div className="space-y-3">
-            {txns.data.transactions.map((txn) => (
+            {rows.map((txn) => (
               <Card key={txn.id ?? txn.orderId} className="flex items-center gap-3 p-4">
                 <div
                   className={`flex h-14 w-14 items-center justify-center rounded-3xl ${
-                    txn.status === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'
+                    txn.status === 'success'
+                      ? 'bg-emerald-50 text-emerald-500'
+                      : txn.status === 'pending'
+                        ? 'bg-orange-50 text-wigope-orange'
+                        : 'bg-red-50 text-red-500'
                   }`}
                 >
                   <Zap className="h-7 w-7" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-lg font-black">{txn.operatorName || txn.operator || txn.service || txn.type}</p>
+                  <p className="truncate text-lg font-black">{txn.operatorName || txn.operator || txn.service || txn.type || 'Transaction'}</p>
                   <p className="text-sm font-bold uppercase text-slate-500">
                     {new Date(txn.createdAt || txn.initiatedAt || Date.now()).toLocaleString()} · {txn.status}
                   </p>
                 </div>
-                <p className="text-lg font-black">₹{txn.amount}</p>
+                <div className="text-right">
+                  <p className="text-lg font-black">₹{txn.amount}</p>
+                  <button className="mt-1 inline-flex items-center gap-1 text-xs font-black text-wigope-orange">
+                    <Download className="h-3 w-3" />
+                    Receipt
+                  </button>
+                </div>
               </Card>
             ))}
           </div>
         ) : (
-          <EmptyState title="No transactions found" body="Your live recharge, wallet, and reward transactions will appear here." />
+          <EmptyState title="No transactions found" body="Recharge, wallet, and rewards transactions will appear here as soon as they happen." />
         )}
 
         <Button variant="secondary" className="w-full" onClick={txns.reload}>
-          Refresh
+          <RefreshCw className="h-5 w-5" />
+          Refresh live status
         </Button>
       </div>
     </AppShell>
+  );
+}
+
+function Metric({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: string; tone: 'orange' | 'green' }) {
+  return (
+    <div className={`flex items-center gap-3 rounded-3xl p-4 ${tone === 'orange' ? 'bg-orange-50' : 'bg-emerald-50'}`}>
+      <span className={`flex h-10 w-10 items-center justify-center rounded-2xl text-white ${tone === 'orange' ? 'bg-wigope-orange' : 'bg-emerald-500'}`}>
+        {icon}
+      </span>
+      <div>
+        <p className="text-xs font-bold text-slate-500">{label}</p>
+        <p className="text-lg font-black">{value}</p>
+      </div>
+    </div>
   );
 }

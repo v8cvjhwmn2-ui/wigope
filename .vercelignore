@@ -1,0 +1,9 @@
+*
+!recharge-web
+!recharge-web/**
+recharge-web/node_modules
+recharge-web/.next
+recharge-web/.next/**
+recharge-web/.next/cache
+recharge-web/.next/cache/**
+recharge-web/tsconfig.tsbuildinfo

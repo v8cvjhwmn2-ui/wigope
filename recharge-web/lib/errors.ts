@@ -14,7 +14,11 @@ export function userMessage(error: unknown) {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'NETWORK':
-        return "We couldn't reach Wigope servers. Check your connection and retry.";
+        return error.message || "We couldn't reach Wigope servers. Check your connection and retry.";
+      case 'REQUEST_TIMEOUT':
+        return 'The request timed out. Please retry in a moment.';
+      case 'PROXY_NETWORK_ERROR':
+        return 'Wigope API gateway is temporarily unreachable. Please retry.';
       case 'OTP_COOLDOWN':
         return 'Please wait before requesting another OTP.';
       case 'OTP_RATE_LIMITED':
@@ -30,8 +34,8 @@ export function userMessage(error: unknown) {
       case 'REFRESH_REUSE':
         return 'Session expired. Please login again.';
       default:
-        return error.message || 'Something went wrong. Please retry.';
+        return error.message || 'Wigope could not complete this request. Please retry.';
     }
   }
-  return 'Something went wrong. Please retry.';
+  return 'Wigope could not complete this request. Please retry.';
 }

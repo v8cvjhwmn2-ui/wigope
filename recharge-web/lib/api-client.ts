@@ -54,8 +54,14 @@ async function request(path: string, options: RequestOptions) {
     return { status: response.status, body };
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError('NETWORK', "We couldn't reach Wigope servers.", undefined, {
-      url
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError('REQUEST_TIMEOUT', 'Wigope servers took too long to respond. Please retry.', undefined, {
+        url
+      });
+    }
+    throw new ApiError('NETWORK', "We couldn't reach Wigope servers. Please check your connection and retry.", undefined, {
+      url,
+      cause: error instanceof Error ? error.message : 'Unknown network error'
     });
   } finally {
     window.clearTimeout(timeout);
@@ -83,9 +89,13 @@ function unwrap<T>(body: unknown, status?: number): T {
 function toApiError(body: unknown, status?: number) {
   const envelope = body as ApiEnvelope<unknown>;
   const error = envelope?.error;
+  const message =
+    error?.message ||
+    (typeof (body as { message?: unknown })?.message === 'string' ? String((body as { message?: unknown }).message) : '') ||
+    `Request failed with status ${status ?? 'unknown'}.`;
   return new ApiError(
     error?.code ?? 'API_ERROR',
-    error?.message ?? 'Request failed. Please retry.',
+    message,
     status,
     error?.details
   );

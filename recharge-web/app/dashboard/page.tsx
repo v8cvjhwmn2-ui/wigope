@@ -1,166 +1,158 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Gift, Plus, RefreshCcw, ShieldCheck, Zap } from 'lucide-react';
+import {
+  CreditCard,
+  Gift,
+  IndianRupee,
+  MessageCircle,
+  Percent,
+  Smartphone,
+  Tv,
+  WalletCards,
+  Zap
+} from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
-import { EmptyState } from '@/components/ui/empty-state';
 import { useAsync } from '@/hooks/use-async';
 import { walletService } from '@/services/wallet';
 import { transactionService } from '@/services/transactions';
 
-const services = [
-  { label: 'Mobile Recharge', icon: '/assets/services/prepaid_recharges.png', href: '/recharge?service=mobile', badge: '3.8% off' },
-  { label: 'DTH Recharge', icon: '/assets/services/dth_d2h_recharges.png', href: '/recharge?service=dth', badge: '4.1% off' },
-  { label: 'Electricity', icon: '/assets/services/electricity_payments.png', href: '/recharge?service=electricity', badge: 'Bills' },
-  { label: 'FASTag', icon: '/assets/services/fastag_recharges.png', href: '/recharge?service=fastag', badge: '2% off' }
-];
-
-const brands = [
-  ['Flipkart', '/assets/brands/voucher_flipkart_new.png'],
-  ['Amazon', '/assets/brands/voucher_amazon_new.png'],
-  ['Myntra', '/assets/brands/voucher_myntra_new.png'],
-  ["Domino's", '/assets/brands/voucher_dominos_new.png'],
-  ['Swiggy', '/assets/brands/voucher_swiggy_new.png'],
-  ['Zomato', '/assets/brands/voucher_zomato_new.png'],
-  ['MakeMyTrip', '/assets/brands/makemytrip_tile.png'],
-  ['See All', '/assets/brands/see_all_tile.png']
+const actions = [
+  { label: 'Mobile Recharge', icon: Smartphone, href: '/recharge?service=mobile' },
+  { label: 'DTH Recharge', icon: Tv, href: '/recharge?service=dth' },
+  { label: 'Gift Cards', icon: Gift, href: '/rewards' },
+  { label: 'Add Money', icon: WalletCards, href: '/wallet' },
+  { label: 'Margin Rates', icon: Percent, href: '/recharge?view=margin' },
+  { label: 'Refer & Earn', icon: IndianRupee, href: '/profile' }
 ];
 
 export default function DashboardPage() {
   const wallet = useAsync(() => walletService.summary(), []);
   const txns = useAsync(() => transactionService.list(), []);
+  const balance = wallet.data?.wallet.balance ?? 0;
+  const transactions = txns.data?.transactions ?? [];
 
   return (
     <AppShell>
-      <div className="space-y-5">
-        <Card className="overflow-hidden bg-gradient-to-br from-orange-50 to-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-navy-800">Available Balance</p>
-              {wallet.loading ? (
-                <Skeleton className="mt-4 h-14 w-36" />
-              ) : wallet.error ? (
-                <button className="mt-4 text-sm font-black text-red-600" onClick={wallet.reload}>
-                  Refresh balance
-                </button>
-              ) : (
-                <p className="mt-3 text-6xl font-black tracking-[-0.08em]">₹{wallet.data?.wallet.balance ?? 0}</p>
-              )}
-            </div>
-            <Link href="/wallet">
-              <Button className="rounded-full">
-                <Plus className="h-5 w-5" />
-                Add
-              </Button>
-            </Link>
-          </div>
-          <div className="mt-5 flex items-center gap-2 text-sm font-bold text-slate-600">
-            <ShieldCheck className="h-5 w-5 text-emerald-500" />
-            Secure wallet
-            <span>·</span>
-            <RefreshCcw className="h-4 w-4 text-wigope-orange" />
-            Auto refresh
-          </div>
-        </Card>
-
-        <Card className="bg-navy-900 text-white">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wigope-orange">
-              <Gift className="h-8 w-8" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-black">Welcome bonus · upto ₹200</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-300">Cashback on your first successful recharge.</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="grid grid-cols-4 gap-3">
-            {services.map((item) => (
-              <Link key={item.label} href={item.href} className="text-center">
-                <div className="relative mx-auto h-16 w-16 rounded-2xl bg-orange-50 p-1">
-                  <Image src={item.icon} alt="" fill className="object-contain p-1" />
-                  <span className="absolute -right-2 -top-2 rounded-full bg-wigope-orange px-2 py-0.5 text-[10px] font-black text-white">
-                    {item.badge}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs font-black leading-tight text-navy-900">{item.label}</p>
+      <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {actions.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex min-h-16 items-center justify-center gap-3 rounded-lg bg-[#294cd4] px-4 py-4 text-base font-black text-white transition hover:bg-wigope-orange"
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
               </Link>
             ))}
           </div>
-        </Card>
+        </div>
 
-        <Card>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl font-black tracking-[-0.04em]">Gift & Voucher Deals</h2>
-            <Link href="/rewards" className="rounded-full bg-orange-50 px-4 py-2 text-sm font-black text-wigope-orange">
-              View all
-            </Link>
-          </div>
-          <div className="grid grid-cols-4 gap-x-4 gap-y-5">
-            {brands.map(([name, src]) => (
-              <Link href="/rewards" key={name} className="text-center">
-                <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-[22px] bg-slate-100">
-                  <Image src={src} alt={name} fill className="object-cover" />
-                </div>
-                <p className="mt-2 text-xs font-black">{name}</p>
-              </Link>
-            ))}
-          </div>
-        </Card>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-black tracking-[-0.03em] text-[#1f1630]">Facing any issue?</h1>
+          <p className="mt-2 text-lg font-semibold text-[#3d314f]">We are available for recharge, wallet and voucher support.</p>
+          <a
+            href="https://wa.me/919568654684"
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#31b65f] px-5 py-4 text-base font-black text-white"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Let&apos;s Connect on WhatsApp
+          </a>
+        </div>
+      </section>
 
-        <Card>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black">Recent activity</h2>
-            <Link href="/transactions" className="text-sm font-black text-wigope-orange">
-              See all
-            </Link>
+      <section className="mt-8">
+        <h2 className="text-2xl font-black tracking-[-0.03em] text-[#1f1630]">Dashboard Statistics</h2>
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <StatCard label="Available Balance" value={wallet.loading ? null : `₹${Number(balance).toFixed(2)}`} />
+          <StatCard label="Total Commission Earned" value="₹0" />
+          <StatCard label="Total Recharges This Month" value={transactions.length ? String(transactions.length) : '0'} />
+          <StatCard label="Total Recharges All Time" value={transactions.length ? String(transactions.length) : '0'} />
+        </div>
+        {wallet.error ? (
+          <div className="mt-4">
+            <ErrorState message="Wallet details could not be loaded." onRetry={wallet.reload} />
+          </div>
+        ) : null}
+      </section>
+
+      <section className="mt-8 border-t border-slate-200 pt-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-black tracking-[-0.03em] text-[#1f1630]">Recent Recharge History</h2>
+          <Link href="/transactions" className="rounded-lg bg-[#17172f] px-4 py-2 text-sm font-black text-white">
+            View transactions
+          </Link>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="grid grid-cols-[72px_1fr_1fr_150px] bg-slate-50 text-sm font-black text-[#1f1630]">
+            <div className="border-r border-slate-200 p-4">#</div>
+            <div className="border-r border-slate-200 p-4">Operator Details</div>
+            <div className="border-r border-slate-200 p-4">Order Details</div>
+            <div className="p-4">Status</div>
           </div>
           {txns.loading ? (
-            <div className="mt-4 space-y-3">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
             </div>
           ) : txns.error ? (
-            <div className="mt-4">
-              <ErrorState message="Transactions could not be loaded." onRetry={txns.reload} />
+            <div className="p-5">
+              <ErrorState message="Recharge history could not be loaded." onRetry={txns.reload} />
             </div>
-          ) : txns.data?.transactions.length ? (
-            <div className="mt-4 space-y-3">
-              {txns.data.transactions.slice(0, 3).map((txn) => (
-                <div key={txn.orderId ?? txn.id} className="flex items-center gap-3 rounded-2xl border border-wigope-line p-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
-                    <Zap className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-black">{txn.operatorName || txn.operator || txn.service || 'Recharge'}</p>
-                    <p className="text-xs font-bold uppercase text-slate-500">{txn.status}</p>
-                  </div>
-                  <p className="font-black">₹{txn.amount}</p>
+          ) : transactions.length ? (
+            <div>
+              {transactions.slice(0, 6).map((txn, index) => (
+                <div key={txn.orderId ?? txn.id ?? index} className="grid grid-cols-[72px_1fr_1fr_150px] border-t border-slate-200 text-sm font-semibold">
+                  <div className="border-r border-slate-200 p-4">{index + 1}</div>
+                  <div className="border-r border-slate-200 p-4">{txn.operatorName || txn.operator || txn.service || 'Recharge'}</div>
+                  <div className="border-r border-slate-200 p-4">₹{txn.amount}</div>
+                  <div className="p-4 font-black uppercase text-wigope-orange">{txn.status}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-4">
-              <EmptyState title="No activity yet" body="Your successful recharges and wallet updates will appear here." />
-            </div>
+            <div className="p-8 text-center text-base font-semibold text-[#3d314f]">No history available</div>
           )}
-        </Card>
+        </div>
+      </section>
 
-        <Link href="/rewards" className="flex items-center justify-between rounded-[28px] bg-white p-5 shadow-card">
+      <footer className="mt-14 rounded-t-2xl bg-[#17172f] px-6 py-10 text-white">
+        <div className="grid gap-8 md:grid-cols-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-wigope-orange">Earn rewards</p>
-            <h2 className="mt-1 text-xl font-black">Open Wigope Rewards</h2>
+            <h3 className="text-lg font-black">WIGOPE TECHNOLOGIES PVT LTD</h3>
+            <p className="mt-2 text-sm font-semibold text-slate-300">CIN: U63999UP2025PTC238367</p>
           </div>
-          <ArrowRight className="h-6 w-6 text-wigope-orange" />
-        </Link>
-      </div>
+          <FooterColumn title="Pages" items={['Home', 'Services', 'Support']} />
+          <FooterColumn title="Important Links" items={['Privacy Policy', 'Terms & Conditions', 'Refund Policy']} />
+          <FooterColumn title="Contact Details" items={['support@wigope.com', '+91 9568 654684']} />
+        </div>
+      </footer>
     </AppShell>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-black text-[#3d314f]">{label}</p>
+      {value === null ? <Skeleton className="mt-3 h-9 w-24" /> : <p className="mt-2 text-3xl font-black text-[#1f1630]">{value}</p>}
+    </div>
+  );
+}
+
+function FooterColumn({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h3 className="text-base font-black">{title}</h3>
+      <ul className="mt-3 space-y-2 text-sm font-semibold text-slate-300">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
   );
 }

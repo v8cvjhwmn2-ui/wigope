@@ -51,9 +51,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    const isPublic = pathname === '/' || pathname === '/login';
+    const isPublic =
+      pathname === '/' ||
+      pathname === '/login' ||
+      pathname === '/about' ||
+      pathname === '/contact' ||
+      pathname === '/support' ||
+      pathname === '/privacy-policy' ||
+      pathname === '/terms' ||
+      pathname === '/refund-policy' ||
+      pathname.startsWith('/services') ||
+      pathname.startsWith('/policies');
     if (!user && !isPublic) router.replace('/login');
-    if (user && pathname === '/login') router.replace('/dashboard');
+    if (user && pathname === '/login') router.replace('/recharge');
   }, [loading, pathname, router, user]);
 
   const signOut = useCallback(async () => {
